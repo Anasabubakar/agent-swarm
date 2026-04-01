@@ -117,11 +117,10 @@ class TUI:
     @staticmethod
     def mini_banner():
         print(f"""
-{C.BRIGHT_CYAN}{C.BOLD}  ╭──────────────────────────────────────╮
-  │  🛡️  SWARM v{TUI.VERSION}                      │
-  │  {C.DIM}Engine-agnostic agent orchestration{C.RESET}{C.BRIGHT_CYAN}{C.BOLD}  │
-  ╰──────────────────────────────────────╯{C.RESET}
-""")
+{C.BRIGHT_CYAN}{C.BOLD}  ╭──────────────────────────────────╮
+  │  🛡️  SWARM v{TUI.VERSION}                  │
+  │  {C.DIM}Engine-agnostic orchestration{C.RESET}{C.BRIGHT_CYAN}{C.BOLD}   │
+  ╰──────────────────────────────────╯{C.RESET}""")
     
     @staticmethod
     def goal(goal: str, workspace: str, engine: str):
@@ -142,10 +141,9 @@ class TUI:
         color = colors.get(phase_num, C.WHITE)
         
         print(f"""
-{C.BOLD}  ╭─ Phase {phase_num}/5 ─────────────────────────────────────────╮
-  │ {icon}  {color}{phase_name}{C.RESET}{C.BOLD} — {C.DIM}{description}{C.RESET}{C.BOLD}                │
-  ╰─────────────────────────────────────────────────────────╯{C.RESET}
-""")
+  {C.BOLD}╭── Phase {phase_num}/5 ────────────────────────────────────╮
+  │ {icon} {color}{phase_name}{C.RESET}{C.BOLD} — {C.DIM}{description}{C.RESET}{C.BOLD}                      │
+  ╰────────────────────────────────────────────────────╯{C.RESET}""")
     
     @staticmethod
     def agent_start(agent_name: str, engine: str):

@@ -675,21 +675,18 @@ class SwarmCLI:
     
     def banner(self):
         print(f"""
-{T.BCYAN}{T.BOLD}
-  ╔═══════════════════════════════════════════════════════════╗
-  ║                                                           ║
-  ║    ███████╗██╗    ██╗ █████╗ ██████╗ ███╗   ███╗         ║
-  ║    ██╔════╝██║    ██║██╔══██╗██╔══██╗████╗ ████║         ║
-  ║    ███████╗██║ █╗ ██║███████║██████╔╝██╔████╔██║         ║
-  ║    ╚════██║██║███╗██║██╔══██║██╔══██╗██║╚██╔╝██║         ║
-  ║    ███████║╚███╔███╔╝██║  ██║██║  ██║██║ ╚═╝ ██║         ║
-  ║    ╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝         ║
-  ║                                                           ║
-  ║{T.BWHITE}    Interactive Agent Swarm CLI                            {T.BCYAN}║
-  ║{T.DIM}    by Anas Abubakar • v1.0.0                              {T.BCYAN}║
-  ║                                                           ║
-  ╚═══════════════════════════════════════════════════════════╝
-{T.RESET}""")
+{T.BCYAN}{T.BOLD}  ╔═══════════════════════════════════════════════╗
+  ║                                               ║
+  ║   ███████╗██╗    ██╗ █████╗ ██████╗ ███╗   ███╗  ║
+  ║   ██╔════╝██║    ██║██╔══██╗██╔══██╗████╗ ████║  ║
+  ║   ███████╗██║ █╗ ██║███████║██████╔╝██╔████╔██║  ║
+  ║   ╚════██║██║███╗██║██╔══██║██╔══██╗██║╚██╔╝██║  ║
+  ║   ███████║╚███╔███╔╝██║  ██║██║  ██║██║ ╚═╝ ██║  ║
+  ║   ╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝  ║
+  ║                                               ║
+  ║{T.BWHITE}   Interactive Agent Swarm CLI                 {T.BCYAN}║
+  ║{T.DIM}   by Anas Abubakar • v1.0.0                   {T.BCYAN}║
+  ╚═══════════════════════════════════════════════╝{T.RESET}""")
     
     def select_model(self):
         """Interactive model selection on startup"""
@@ -721,6 +718,74 @@ class SwarmCLI:
             self.engine = options[idx]
         
         print(f"  {T.GREEN}✓{T.RESET} Engine: {T.BOLD}{self.engine}{T.RESET}\n")
+    
+    def is_simple_question(self, text: str) -> bool:
+        """Detect if input is a simple question, not a build goal"""
+        text_lower = text.lower().strip()
+        
+        simple_patterns = [
+            "what can you do", "what are you", "who are you",
+            "hello", "hi", "hey", "sup", "what's up",
+            "how do you work", "how does this work",
+            "help", "what is this", "explain",
+            "how many agents", "how many skills",
+            "tell me about", "what's your name",
+            "thanks", "thank you", "ok", "okay", "cool",
+            "nice", "great", "awesome", "lol", "haha",
+        ]
+        
+        for pattern in simple_patterns:
+            if pattern in text_lower:
+                return True
+        
+        # Very short messages are likely chat, not goals
+        if len(text_lower.split()) <= 3 and "?" in text:
+            return True
+        
+        return False
+    
+    def answer_simple(self, text: str):
+        """Answer simple questions without running orchestrator"""
+        text_lower = text.lower().strip()
+        
+        responses = {
+            "what can you do": f"""I'm {T.BOLD}Swarm{T.RESET} — an AI agent orchestrator. I coordinate specialist AI agents to build things for you.
+
+{T.BCYAN}What I can do:{T.RESET}
+  {T.GREEN}•{T.RESET} Build websites, apps, APIs
+  {T.GREEN}•{T.RESET} Create frontend, backend, full-stack projects
+  {T.GREEN}•{T.RESET} Set up DevOps, CI/CD, deployment
+  {T.GREEN}•{T.RESET} Security audits, testing, QA
+  {T.GREEN}•{T.RESET} Motion graphics, animations
+  {T.GREEN}•{T.RESET} UI/UX design research
+  {T.GREEN}•{T.RESET} And 245+ specialized agents
+
+{T.BCYAN}How to use:{T.RESET}
+  Just tell me what you want to build: {T.DIM}"Build a landing page"{T.RESET}
+
+{T.BCYAN}Commands:{T.RESET}
+  Type {T.BCYAN}/help{T.RESET} for all slash commands
+  Type {T.BCYAN}/employee list{T.RESET} to see all agents""",
+            
+            "who are you": "I'm 🛡️ Swarm — built by Anas Abubakar. I coordinate 245 AI agents to build things for you.",
+            "what is this": "This is Agent Swarm — an engine-agnostic multi-agent orchestration CLI. Type a goal to get started!",
+            "how many agents": f"I have {T.BOLD}245 agents{T.RESET} across engineering, design, testing, marketing, and more. Type /employee list to browse them.",
+        }
+        
+        for key, response in responses.items():
+            if key in text_lower:
+                print(f"\n  {response}\n")
+                self.memory.add("user", text)
+                self.memory.add("assistant", response)
+                return
+        
+        # Generic response
+        print(f"\n  I'm here to build things for you! Try giving me a goal like:")
+        print(f"  {T.CYAN}\"Build a landing page for TeenovateX\"{T.RESET}")
+        print(f"  {T.CYAN}\"Create a React todo app\"{T.RESET}")
+        print(f"  {T.CYAN}\"Set up a REST API with Node.js\"{T.RESET}\n")
+        self.memory.add("user", text)
+        self.memory.add("assistant", "Suggested user give a build goal")
     
     def run_goal(self, goal: str):
         """Run the orchestrator for a goal"""
@@ -756,7 +821,10 @@ class SwarmCLI:
             print(f"\n  {T.RED}✗{T.RESET} Timed out after 10 minutes")
             self.memory.add("assistant", f"Timed out: {goal}")
         except KeyboardInterrupt:
-            print(f"\n  {T.YELLOW}⏸{T.RESET} Interrupted")
+            print(f"\n  {T.YELLOW}⏸{T.RESET} Cancelled")
+            self.memory.add("assistant", f"Cancelled: {goal}")
+        except Exception as e:
+            print(f"\n  {T.RED}✗{T.RESET} Error: {str(e)[:80]}")
         print()
     
     def chat_loop(self):
@@ -769,10 +837,10 @@ class SwarmCLI:
         while True:
             try:
                 # Prompt
-                engine_display = f"{T.DIM}[{self.engine}]{T.RESET}" if self.engine != "auto" else ""
-                agent_display = f"{T.DIM}({self.active_agent}){T.RESET}" if self.active_agent else ""
+                engine_display = f"{T.DIM}[{self.engine}]{T.RESET} " if self.engine != "auto" else ""
+                agent_display = f"{T.DIM}({self.active_agent}){T.RESET} " if self.active_agent else ""
                 
-                sys.stdout.write(f"  {T.BGREEN}▸{T.RESET} {engine_display}{agent_display} ")
+                sys.stdout.write(f"  {T.BGREEN}▸{T.RESET} {engine_display}{agent_display}")
                 T.flush()
                 
                 user_input = input().strip()
@@ -785,17 +853,22 @@ class SwarmCLI:
                     SlashCommands.handle(user_input, self)
                     continue
                 
-                # Handle ESC to exit
+                # Handle exit
                 if user_input.lower() in ["quit", "exit", "q"]:
                     print(f"\n  {T.BCYAN}Goodbye! 🛡️{T.RESET}\n")
                     break
+                
+                # Simple questions — answer directly, don't run orchestrator
+                if self.is_simple_question(user_input):
+                    self.answer_simple(user_input)
+                    continue
                 
                 # Run goal
                 self.run_goal(user_input)
                 
             except KeyboardInterrupt:
-                print(f"\n\n  {T.BCYAN}Goodbye! 🛡️{T.RESET}\n")
-                break
+                print(f"\n")
+                continue  # Don't exit on CTRL+C, just cancel current operation
             except EOFError:
                 print()
                 break

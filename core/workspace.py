@@ -41,14 +41,18 @@ class Workspace:
         slug = goal.lower()
         for char in [" ", "/", "\\", ":", "*", "?", "\"", "<", ">", "|", "."]:
             slug = slug.replace(char, "-")
-        slug = slug[:50].strip("-")
+        slug = slug[:30].strip("-")
+        # Remove multiple dashes
+        while "--" in slug:
+            slug = slug.replace("--", "-")
         
         self.name = f"{slug}-{self.timestamp}"
         
-        if base_dir:
+        # Create in current directory (or specified base)
+        if base_dir and base_dir != ".":
             self.path = Path(base_dir) / self.name
         else:
-            self.path = PROJECTS_DIR / self.name
+            self.path = Path.cwd() / self.name
         
         self.meta_file = self.path / ".swarm-meta.json"
         self.agents_run = []
