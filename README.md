@@ -1,95 +1,142 @@
-# 🛡️ Agent Swarm
+# 🛡️ Swarm
 
-**Engine-agnostic multi-agent orchestration. 700+ resources from 5 top repos. Works with ANY CLI agent.**
+**Engine-agnostic multi-agent orchestration. 245 agents. One command.**
 
-One orchestrator. Hundreds of specialist AI employees. Parallel execution.
+```bash
+curl -fsSL https://raw.githubusercontent.com/Anasabubakar/agent-swarm/main/install.sh | bash
+```
+
+Then in any project folder:
+```bash
+swarm "Build a landing page"
+```
+
+That's it.
+
+## What Happens
+
+```
+swarm "Build a todo app with React"
+  ↓
+📁 Creates isolated workspace: projects/build-a-todo-app-with-react-20260401/
+❓ Questionnaire asks clarifying questions
+📐 Planner designs the implementation
+🚀 Frontend + Backend + QA agents build in parallel
+🐛 Debugger fixes any failures
+🔍 Tech Lead reviews everything
+  ↓
+✅ Done. Check your workspace.
+```
+
+## Install
+
+### Option 1: Curl (Recommended)
+```bash
+curl -fsSL https://raw.githubusercontent.com/Anasabubakar/agent-swarm/main/install.sh | bash
+```
+
+### Option 2: NPM
+```bash
+npm install -g @anasabubakar/swarm
+```
+
+### Option 3: Manual
+```bash
+git clone https://github.com/Anasabubakar/agent-swarm.git ~/.swarm
+ln -sf ~/.swarm/bin/swarm /usr/local/bin/swarm
+```
+
+### Prerequisites
+- Python 3.8+
+- Git
+- At least one AI engine: `kilo`, `claude`, `gemini`, `codex`, `aider`, or `cursor-agent`
+
+## Usage
+
+```bash
+# Interactive — just shows help
+swarm
+
+# Give a goal — orchestrator handles everything
+swarm "Build a landing page for TeenovateX Labs"
+
+# Use a specific engine
+swarm -e gemini "Create a REST API"
+
+# Run a single agent
+swarm -a frontend-dev "Create a responsive navbar"
+
+# List what's available
+swarm --list-engines
+swarm --list-agents
+```
 
 ## What's Inside
 
-| Category | Count | Sources |
-|----------|-------|---------|
-| 🤖 **Agents** | 252 | agency-agents, everything-claude-code, superpowers, get-shit-done |
-| 🛠️ **Skills** | 239 | everything-claude-code, superpowers |
-| 📋 **Commands** | 125 | everything-claude-code, get-shit-done |
-| 📏 **Rules** | 77 | everything-claude-code (12+ languages) |
-| 🔧 **Engines** | 11+ | Claude Code, Gemini, Codex, Cursor, Aider, Windsurf, Copilot, etc. |
-| **Total** | **700+** | |
-
-## Source Repos (Integrated)
-
-- **[agency-agents](https://github.com/msitarzewski/agency-agents)** — 185 specialized agent definitions across engineering, product, design, testing, marketing, sales
-- **[everything-claude-code](https://github.com/affaan-m/everything-claude-code)** — 147 skills, 36 agents, 68 commands, language-specific rules
-- **[superpowers](https://github.com/obra/superpowers)** — 14 workflow skills (TDD, parallel dispatch, code review, debugging)
-- **[get-shit-done](https://github.com/gsd-build/get-shit-done)** — 18 agents (planner, executor, debugger, verifier, UI checker)
-- **[claude-mem](https://github.com/thedotmack/claude-mem)** — Persistent memory system
-
-## Key Features
-
-### 🎯 Engine-Agnostic
-Works with ANY CLI agent that accepts a prompt:
-
-```
-Claude Code · Gemini CLI · Codex · Cursor · Aider · Windsurf · Copilot · OpenCode · Qwen · ANY custom CLI
-```
-
-### 🤖 252 Agents
-
-**Engineering:** frontend-dev, backend-architect, mobile-builder, ai-engineer, devops, security, database-optimizer, code-reviewer, SRE, rapid-prototyper, software-architect, and 50+ more
-
-**Design:** ui-designer, ux-architect, brand-guardian, visual-storyteller, whimsy-injector
-
-**Product:** product-manager, sprint-prioritizer, feedback-synthesizer, trend-researcher
-
-**Testing:** qa-tester, api-tester, accessibility-auditor, performance-benchmarker, reality-checker
-
-**Management:** project-manager, tech-lead, studio-producer, experiment-tracker
-
-**And more:** marketing, sales, support, strategy, academic, specialized
-
-### 🛠️ 239 Skills
-TDD, parallel agent dispatch, code review, debugging, git workflow, security scanning, database migrations, API design, deployment patterns, and 200+ more
-
-### 📏 77 Language Rules
-TypeScript, Python, Go, Rust, Java, Kotlin, Swift, C++, PHP, Perl, C#, and more
-
-## Quick Start
-
-```bash
-# Clone
-git clone https://github.com/Anasabubakar/agent-swarm.git
-cd agent-swarm
-
-# See what's available
-python orchestrator.py --list-agents
-python orchestrator.py --list-engines
-
-# Give a goal
-python orchestrator.py "Build a landing page for TeenovateX Labs"
-
-# Use specific engine
-python orchestrator.py --engine gemini "Create a REST API"
-
-# Use specific agent
-python orchestrator.py --agent frontend-dev "Create a navbar component"
-
-# Register your own engine
-python orchestrator.py --register-engine myagent "my-cli" "--system-prompt"
-```
+| Category | Count | What |
+|---|---|---|
+| 🤖 Agents | 245 | Frontend, backend, devops, security, design, QA, PM, and 200+ more |
+| 🛠️ Skills | 239 | TDD, code review, debugging, deployment, security scanning |
+| 📋 Commands | 125 | Slash commands for common workflows |
+| 📏 Rules | 77 | Language-specific coding standards (TS, Python, Go, Rust, etc.) |
+| 🔧 Engines | 11+ | Claude, Gemini, Kilo, Codex, Cursor, Aider, Windsurf, Copilot, etc. |
 
 ## How It Works
 
+### 5-Phase Workflow
+1. **Questionnaire** — Asks clarifying questions before building
+2. **Planner** — Designs architecture and task dependencies
+3. **Execute** — Dispatches specialist agents in parallel
+4. **Debug** — Automatically fixes failures
+5. **Ship** — Tech Lead final review
+
+### Workspace Isolation
+Each goal creates its own project folder. The swarm folder stays untouched.
 ```
-1. You give a goal → "Build a landing page"
-2. PM agent breaks it into tasks
-3. Orchestrator dispatches to specialist agents (parallel)
-4. Agents work independently, write to output/
-5. Tech Lead reviews for consistency
-6. Report compiled with all results
+projects/
+└── your-goal-timestamp/
+    ├── src/                    ← agents build here
+    ├── tests/
+    ├── .swarm-meta.json        ← tracking metadata
+    └── .swarm-report.json      ← final report
 ```
+
+### Safety
+Commands are classified:
+- ✅ **Safe** — Auto-approve (ls, cat, git status)
+- 🟡 **Moderate** — Auto-approve, logged (npm install, git commit)
+- 🔴 **Dangerous** — Needs approval (rm, deploy, git push --force)
+- 🚫 **Blocked** — Never allowed (rm -rf /, shutdown)
+
+### Self-Healing
+If an agent fails:
+1. **Retry** — Same agent, exponential backoff
+2. **Reassign** — Swap to backup agent
+3. **Simplify** — Break task into smaller pieces
+4. **Fallback** — Switch to different engine
+5. **Escalate** — Flag for human review
+
+## Engine Support
+
+Works with ANY CLI agent that accepts a prompt:
+
+| Engine | Status |
+|---|---|
+| Claude Code | ✅ |
+| Gemini CLI | ✅ |
+| Kilo Code | ✅ |
+| Codex | ✅ |
+| Cursor Agent | ✅ |
+| Aider | ✅ |
+| Windsurf | ✅ |
+| GitHub Copilot | ✅ |
+| OpenCode | ✅ |
+| Qwen Code | ✅ |
+| Any custom CLI | ✅ (via `--engine generic`) |
 
 ## Adding Your Own Agent
 
-Just drop a `.md` file in `agents/`:
+Drop a `.md` file in `agents/`:
 
 ```markdown
 # My Agent
@@ -97,61 +144,19 @@ Just drop a `.md` file in `agents/`:
 ## Role
 You are a [specialty]. You ONLY do [thing].
 
-## Input
-[what you receive]
-
-## Output
-[what you produce]
-
 ## Constraints
 - DO [things]
 - DON'T [things]
 ```
 
-## Adding Your Own Engine
+## Source Repos (Integrated)
 
-```python
-from engines.adapter import BaseEngine, register_engine
-
-class MyEngine(BaseEngine):
-    name = "myengine"
-    command = "my-cli"
-    system_prompt_flag = "--system"
-
-register_engine("myengine", MyEngine)
-```
-
-Or dynamically:
-```bash
-python orchestrator.py --engine generic --command "my-cli" --system-flag "--role" "Do something"
-```
-
-## Architecture
-
-```
-agent-swarm/
-├── orchestrator.py          ← Main orchestrator
-├── swarm.config.json        ← Configuration (239 agents registered)
-├── engines/adapter.py       ← Engine abstraction layer
-├── agents/                  ← 252 agent definitions
-│   ├── engineering/         ← Frontend, backend, devops, security, etc.
-│   ├── design/              ← UI, UX, brand, visual
-│   ├── product/             ← PM, sprint, feedback
-│   ├── testing/             ← QA, API, accessibility, performance
-│   ├── project-management/  ← Project shepherd, experiment tracker
-│   ├── ecc/                 ← everything-claude-code agents
-│   ├── gsd/                 ← get-shit-done agents
-│   └── ...                  ← More categories
-├── skills/                  ← 239 workflow skills
-│   ├── superpowers/         ← TDD, parallel dispatch, code review
-│   └── ...                  ← 147 ECC skills
-├── commands/                ← 125 slash commands
-├── rules/                   ← 77 language-specific rules
-├── memory-system/           ← claude-mem integration
-├── memory/                  ← Agent shared state
-└── output/                  ← Agent work output
-```
+- [agency-agents](https://github.com/msitarzewski/agency-agents) — 185 specialist agents
+- [everything-claude-code](https://github.com/affaan-m/everything-claude-code) — 147 skills, 36 agents, 68 commands
+- [superpowers](https://github.com/obra/superpowers) — TDD, parallel dispatch, code review
+- [get-shit-done](https://github.com/gsd-build/get-shit-done) — 18 agents, meta-prompting
+- [claude-mem](https://github.com/thedotmack/claude-mem) — Persistent memory system
 
 ## License
 
-MIT — All source repos included under their original licenses.
+MIT — Copyright (c) 2026 Anas Abubakar

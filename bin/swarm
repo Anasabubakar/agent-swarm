@@ -1,0 +1,185 @@
+#!/usr/bin/env node
+
+/**
+ * Agent Swarm CLI
+ * Usage: swarm [options] [goal]
+ * 
+ * Examples:
+ *   swarm                              # Interactive mode
+ *   swarm "Build a landing page"       # Direct goal
+ *   swarm --agents                     # List agents
+ *   swarm --engines                    # List engines
+ *   swarm --version                    # Show version
+ */
+
+import { spawn, execSync } from 'child_process';
+import { existsSync, readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { platform } from 'os';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const SWARM_ROOT = join(__dirname, '..');
+
+// Colors
+const colors = {
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+  cyan: '\x1b[36m',
+  white: '\x1b[37m',
+};
+
+const c = colors;
+
+// Version
+function getVersion() {
+  try {
+    const pkg = JSON.parse(readFileSync(join(SWARM_ROOT, 'package.json'), 'utf8'));
+    return pkg.version;
+  } catch {
+    return '1.0.0';
+  }
+}
+
+// Banner
+function banner() {
+  console.log(`
+${c.cyan}${c.bold}  ╔══════════════════════════════════════╗
+  ║  🛡️  AGENT SWARM v${getVersion()}              ║
+  ║  Engine-agnostic multi-agent system  ║
+  ║  by Anas Abubakar                    ║
+  ╚══════════════════════════════════════╝${c.reset}
+`);
+}
+
+// Help
+function help() {
+  banner();
+  console.log(`${c.bold}USAGE:${c.reset}
+  ${c.green}swarm${c.reset}                              Interactive mode
+  ${c.green}swarm${c.reset} "Build a landing page"       Run with a goal
+  ${c.green}swarm${c.reset} --agents                     List all 245 agents
+  ${c.green}swarm${c.reset} --engines                    List available engines
+  ${c.green}swarm${creset} --agent frontend-dev "Task"    Run single agent
+  ${c.green}swarm${c.reset} --version                    Show version
+
+${c.bold}OPTIONS:${c.reset}
+  ${c.yellow}-e, --engine${c.reset} <name>    Force a specific engine (auto-detects by default)
+  ${c.yellow}-a, --agent${c.reset} <name>     Run a single agent
+  ${c.yellow}-i, --interactive${c.reset}      Pause for human input between phases
+  ${c.yellow}--project${c.reset} <dir>         Project directory (default: current)
+  ${c.yellow}--list-agents${c.reset}           List all available agents
+  ${c.yellow}--list-engines${c.reset}          List all engines and availability
+
+${c.bold}EXAMPLES:${c.reset}
+  ${c.cyan}swarm "Create a React todo app"${c.reset}
+  ${c.cyan}swarm -e gemini "Build an API"${c.reset}
+  ${c.cyan}swarm -a motion-graphics "Create a logo reveal"${c.reset}
+  ${c.cyan}swarm --list-agents | grep frontend${c.reset}
+
+${c.bold}WORKFLOW:${c.reset}
+  ${c.magenta}1. Questionnaire${c.reset} — Ask clarifying questions
+  ${c.magenta}2. Planner${c.reset}       — Design implementation plan
+  ${c.magenta}3. Execute${c.reset}       — Dispatch specialist agents (parallel)
+  ${c.magenta}4. Debug${c.reset}         — Fix any failures automatically
+  ${c.magenta}5. Ship${c.reset}          — Tech Lead final review
+
+${c.bold}ENGINES:${c.reset}
+  Claude Code · Gemini CLI · Kilo Code · Codex · Cursor · Aider · Windsurf · Copilot · OpenCode · Qwen · Any custom CLI
+`);
+}
+
+// Check Python
+function checkPython() {
+  const pythons = ['python3', 'python'];
+  for (const py of pythons) {
+    try {
+      execSync(`${py} --version`, { stdio: 'ignore' });
+      return py;
+    } catch {}
+  }
+  return null;
+}
+
+// Run orchestrator
+function run(args) {
+  const python = checkPython();
+  if (!python) {
+    console.error(`${c.red}Error: Python 3 is required but not found.${c.reset}`);
+    console.error('Install Python 3: https://python.org/downloads');
+    process.exit(1);
+  }
+
+  const orchestratorPath = join(SWARM_ROOT, 'orchestrator.py');
+  if (!existsSync(orchestratorPath)) {
+    console.error(`${c.red}Error: orchestrator.py not found at ${orchestratorPath}${c.reset}`);
+    process.exit(1);
+  }
+
+  const child = spawn(python, [orchestratorPath, ...args], {
+    cwd: process.cwd(), // Use current directory as project root
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      SWARM_ROOT: SWARM_ROOT,
+    },
+  });
+
+  child.on('exit', (code) => {
+    process.exit(code || 0);
+  });
+
+  child.on('error', (err) => {
+    console.error(`${c.red}Error: ${err.message}${c.reset}`);
+    process.exit(1);
+  });
+}
+
+// Main
+function main() {
+  const args = process.argv.slice(2);
+
+  // No args — interactive mode
+  if (args.length === 0) {
+    banner();
+    console.log(`${c.yellow}Tip: Just give me a goal!${c.reset}`);
+    console.log(`${c.cyan}  swarm "Build a todo app"${c.reset}\n`);
+    help();
+    process.exit(0);
+  }
+
+  // Help
+  if (args.includes('--help') || args.includes('-h')) {
+    help();
+    process.exit(0);
+  }
+
+  // Version
+  if (args.includes('--version') || args.includes('-v')) {
+    console.log(`swarm v${getVersion()}`);
+    process.exit(0);
+  }
+
+  // List agents
+  if (args.includes('--list-agents') || args.includes('--agents')) {
+    run(['--list-agents']);
+    return;
+  }
+
+  // List engines
+  if (args.includes('--list-engines') || args.includes('--engines')) {
+    run(['--list-engines']);
+    return;
+  }
+
+  // Everything else — pass to orchestrator
+  run(args);
+}
+
+main();
