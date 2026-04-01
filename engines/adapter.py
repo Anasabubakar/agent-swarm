@@ -10,6 +10,7 @@ Each engine is just a command template. Add any engine by defining:
 """
 
 import subprocess
+import shutil
 from pathlib import Path
 from typing import Optional
 
@@ -25,16 +26,22 @@ class BaseEngine:
     system_prompt_flag: str = "--system-prompt"
     task_position: str = "end"  # "end" means task goes at the end
     auto_flag: str = ""  # optional flag for autonomous mode
-    timeout: int = 600  # 10 minutes default
+    timeout: int = 300  # 5 minutes default (reduced from 10)
+    needs_pty: bool = False  # whether this engine needs a pseudo-terminal
     
     @classmethod
     def build_command(cls, system_prompt: str, task: str) -> list:
-        """Build the command to execute"""
+        """Build the command to execute. Uses temp file for long system prompts."""
+        # Save system prompt to file to avoid CLI arg length limits
+        prompt_file = SWARM_ROOT / "memory" / f"_prompt_{cls.name}.md"
+        prompt_file.parent.mkdir(exist_ok=True)
+        prompt_file.write_text(system_prompt)
+        
         cmd = cls.command.split()
         
-        # Add system prompt
+        # Add system prompt via file
         if cls.system_prompt_flag:
-            cmd.extend([cls.system_prompt_flag, system_prompt])
+            cmd.extend([cls.system_prompt_flag, str(prompt_file)])
         
         # Add auto flag if specified
         if cls.auto_flag:
@@ -44,7 +51,6 @@ class BaseEngine:
         if cls.task_position == "end":
             cmd.append(task)
         elif cls.task_position == "after_command":
-            # Insert task right after the base command
             cmd = [cmd[0], task] + cmd[1:]
         
         return cmd
@@ -117,13 +123,15 @@ class KiloCodeEngine(BaseEngine):
     """Kilo Code CLI"""
     name = "kilocode"
     command = "kilo"
-    system_prompt_flag = None  # Kilo uses inline prompt
-    auto_flag = "run --auto"
+    system_prompt_flag = None
+    auto_flag = "--auto"
     
     @classmethod
     def build_command(cls, system_prompt: str, task: str) -> list:
-        full_prompt = f"SYSTEM PROMPT:\n{system_prompt}\n\nTASK:\n{task}"
-        return ["kilo", "run", "--auto", full_prompt]
+        # Combine system prompt and task into one message
+        # Keep it concise to avoid token waste
+        prompt = f"{system_prompt}\n\n---\n\nYour task: {task}\n\nComplete the task and return your results."
+        return ["kilo", "run", "--auto", prompt]
 
 
 class CodexEngine(BaseEngine):
@@ -252,8 +260,20 @@ def list_engines() -> list:
         {
             "name": name,
             "class": cls.__name__,
-            "command": cls.command,
+            "command": cls.command or "(dynamic)",
             "system_prompt_flag": cls.system_prompt_flag,
+            "available": bool(cls.command) and shutil.which(cls.command.split()[0]) is not None,
         }
         for name, cls in ENGINES.items()
     ]
+
+
+def detect_available_engine() -> Optional[str]:
+    """Auto-detect which engine CLI is installed on the system"""
+    for name, cls in ENGINES.items():
+        if name == "generic":
+            continue
+        cmd = cls.command.split()[0]
+        if shutil.which(cmd):
+            return name
+    return None

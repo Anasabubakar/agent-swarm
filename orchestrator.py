@@ -17,6 +17,7 @@ Usage:
 import os
 import json
 import sys
+import shutil
 import argparse
 import concurrent.futures
 from datetime import datetime
@@ -25,7 +26,7 @@ from pathlib import Path
 # Add engines to path
 sys.path.insert(0, str(Path(__file__).parent))
 from engines.adapter import (
-    get_engine, register_engine, list_engines, GenericEngine, BaseEngine
+    get_engine, register_engine, list_engines, detect_available_engine, GenericEngine, BaseEngine
 )
 
 # Paths
@@ -66,13 +67,20 @@ def dispatch_agent(
             or config.get("default_engine", "claude")
         )
     
+    # Auto-detect if specified engine isn't available
     engine = get_engine(engine_name)
-    if engine is None:
-        return {
-            "agent": agent_name,
-            "status": "ERROR",
-            "error": f"Unknown engine: {engine_name}. Use --list-engines to see available engines."
-        }
+    if engine is None or not shutil.which(engine.command.split()[0]):
+        detected = detect_available_engine()
+        if detected:
+            print(f"  ⚠️  Engine '{engine_name}' not found, auto-detected: {detected}")
+            engine_name = detected
+            engine = get_engine(engine_name)
+        else:
+            return {
+                "agent": agent_name,
+                "status": "ERROR",
+                "error": f"No CLI agent found. Install one of: claude, gemini, kilo, codex, cursor-agent, aider"
+            }
     
     # Find agent file
     agent_config = config.get("agents", {}).get(agent_name, {})
