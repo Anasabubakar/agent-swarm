@@ -333,22 +333,31 @@ def detect_engines() -> list:
 class ActionDetector:
     """Detect if input is a question, file operation, or build task"""
     
+    GREETINGS = [
+        "hi", "hello", "hey", "yo", "sup", "wassup", "what's up",
+        "haffa", "wetin dey", "good morning", "good afternoon",
+        "good evening", "how far", "oya", "weldone", "nack",
+    ]
+    
     BUILD_KEYWORDS = [
-        "build", "create", "make", "develop", "implement", "code",
-        "scaffold", "setup", "generate", "write code", "program",
-        "landing page", "website", "app", "api", "dashboard",
-        "todo", "calculator", "chat", "login", "signup",
+        "build a", "create a", "make a", "develop a", "implement a",
+        "write a", "code a", "scaffold a", "setup a", "generate a",
+        "build me", "create me", "make me",
+        "landing page", "website", "web app", "mobile app",
+        "api", "rest api", "dashboard", "admin panel",
+        "todo app", "todo list", "calculator", "chat app",
+        "login page", "signup page", "auth system",
     ]
     
     FILE_KEYWORDS = [
-        "read", "open", "show", "cat", "view", "look at",
-        "what's in", "what is in", "explain this code",
-        "what does", "how does", "understand",
+        "read ", "open ", "show me ", "cat ", "view ",
+        "what's in ", "what is in ", "explain this code",
+        "look at ", "contents of ",
     ]
     
     CMD_KEYWORDS = [
-        "run", "execute", "install", "start", "build", "test",
-        "deploy", "push", "commit", "npm", "pip", "docker",
+        "run ", "execute ", "install ", "npm ", "pip ",
+        "docker ", "git ", "yarn ", "pnpm ",
     ]
     
     @staticmethod
@@ -356,32 +365,34 @@ class ActionDetector:
         """Returns: question, build, file_read, command, or chat"""
         text_lower = text.lower().strip()
         
-        # Check for file read
+        # Very short or greeting → chat
+        words = text_lower.split()
+        if len(words) <= 2:
+            for g in ActionDetector.GREETINGS:
+                if g in text_lower:
+                    return "chat"
+            if len(words) == 1 and not any(c in text_lower for c in ['.', '/', '\\']):
+                return "chat"
+        
+        # File read
         for kw in ActionDetector.FILE_KEYWORDS:
             if kw in text_lower:
-                # Check if there's a filename mentioned
-                words = text_lower.split()
-                for w in words:
-                    if '.' in w and len(w) > 3:
-                        return "file_read"
-                if any(p in text_lower for p in ['read ', 'show ', 'cat ', 'open ']):
-                    return "file_read"
+                return "file_read"
         
-        # Check for build task
-        for kw in ActionDetector.BUILD_KEYWORDS:
-            if kw in text_lower and len(text_lower.split()) > 2:
-                return "build"
-        
-        # Check for command
+        # Command (must start with keyword)
         for kw in ActionDetector.CMD_KEYWORDS:
-            if text_lower.startswith(kw + " ") or text_lower.startswith(kw + " "):
+            if text_lower.startswith(kw):
                 return "command"
-        
-        # Check for listing files
-        if text_lower in ['ls', 'dir', 'list files', 'show files', 'what files']:
+        if text_lower in ['ls', 'dir', 'pwd', 'whoami']:
             return "command"
         
-        # Otherwise it's a question/chat
+        # Build (need at least 3 words and a build keyword)
+        if len(words) >= 3:
+            for kw in ActionDetector.BUILD_KEYWORDS:
+                if kw in text_lower:
+                    return "build"
+        
+        # Everything else is a question
         return "question"
 
 
@@ -433,12 +444,16 @@ def run_swarm(goal: str, engine: str, cwd: str) -> bool:
     cmd.append(goal)
     
     try:
-        subprocess.run(cmd, cwd=cwd, timeout=600)
-        return True
+        # Use Popen for better CTRL+C handling
+        proc = subprocess.Popen(cmd, cwd=cwd)
+        proc.wait(timeout=600)
+        return proc.returncode == 0
     except subprocess.TimeoutExpired:
+        proc.kill()
         print(f"  {C.t(C.RED, '✗ Timed out')}")
         return False
     except KeyboardInterrupt:
+        proc.kill()
         print(f"\n  {C.t(C.YLW, '⏸ Cancelled')}")
         return False
 
@@ -760,7 +775,23 @@ class SwarmCLI:
                 action = ActionDetector.detect(user_input)
                 self.memory.add("user", user_input)
                 
-                if action == "question" or action == "chat":
+                if action == "chat":
+                    # Casual chat — respond naturally
+                    responses = {
+                        "yo": "Yo! What's good? 👋",
+                        "hi": "Hey! What can I do for you?",
+                        "hello": "Hello! Ready to work. What do you need?",
+                        "hey": "Hey hey! What's the plan?",
+                        "sup": "Not much, just waiting for your commands 😄",
+                        "wassup": "Chilling, ready to build. What's up with you?",
+                        "haffa": "Haffa! Wetin dey? 😄",
+                        "how far": "I dey! You good? What you need?",
+                    }
+                    reply = responses.get(user_input.lower().strip(), "Hey! What do you need?")
+                    print(f"\n  {reply}\n")
+                    self.memory.add("assistant", reply)
+                
+                elif action == "question" or action == "chat":
                     # These should go through the engine for real AI responses
                     # For now, suggest using the engine
                     print(f"\n  {C.t(C.BLU, '💡')} I'd answer this using {self.engine}.")
