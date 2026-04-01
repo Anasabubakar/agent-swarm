@@ -409,10 +409,14 @@ Examples:
     # List engines
     if args.list_engines:
         print("\n🔧 Available Engines:\n")
+        all_available = detect_all_available()
         for eng in list_engines():
-            print(f"  {eng['name']:12} — {eng['command']:20} (flag: {eng['system_prompt_flag']})")
+            status = "✅ INSTALLED" if eng['name'] in all_available else "❌ not found"
+            print(f"  {eng['name']:12} — {eng['command']:20} {status}")
         print(f"\n  {'generic':12} — (configure dynamically with --command and --system-flag)")
-        print(f"\nTotal: {len(list_engines()) + 1} engines")
+        if all_available:
+            print(f"\n  Auto-detected default: {all_available[0]}")
+        print(f"\n  Total: {len(list_engines()) + 1} engines ({len(all_available)} available)")
         return
     
     # List agents

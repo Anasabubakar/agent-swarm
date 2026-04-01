@@ -116,7 +116,15 @@ class GeminiCLIEngine(BaseEngine):
     """Google Gemini CLI"""
     name = "gemini"
     command = "gemini"
-    system_prompt_flag = "--system-prompt"
+    system_prompt_flag = None  # Gemini doesn't have system prompt flag
+    auto_flag = None
+    
+    @classmethod
+    def build_command(cls, system_prompt: str, task: str) -> list:
+        # Gemini uses -p for non-interactive prompt
+        # Combine system prompt + task into one prompt
+        full_prompt = f"{system_prompt}\n\n---\n\nYour task: {task}\n\nComplete the task and return your results."
+        return ["gemini", "-p", full_prompt]
 
 
 class KiloCodeEngine(BaseEngine):
@@ -270,10 +278,23 @@ def list_engines() -> list:
 
 def detect_available_engine() -> Optional[str]:
     """Auto-detect which engine CLI is installed on the system"""
+    # Priority order: kilo > gemini > claude > codex > cursor > aider > rest
+    priority = ["kilocode", "gemini", "claude", "codex", "cursor", "aider", "windsurf", "copilot", "opencode", "qwen"]
+    for name in priority:
+        cls = ENGINES.get(name)
+        if cls and cls.command:
+            cmd = cls.command.split()[0]
+            if shutil.which(cmd):
+                return name
+    return None
+
+
+def detect_all_available() -> list:
+    """List all available engines in priority order"""
+    available = []
     for name, cls in ENGINES.items():
         if name == "generic":
             continue
-        cmd = cls.command.split()[0]
-        if shutil.which(cmd):
-            return name
-    return None
+        if cls.command and shutil.which(cls.command.split()[0]):
+            available.append(name)
+    return available
