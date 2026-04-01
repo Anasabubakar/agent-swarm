@@ -1,50 +1,1212 @@
 {
-  "version": "1.0",
+  "version": "2.0",
   "name": "agent-swarm",
-  "description": "Multi-agent swarm system — works with any CLI agent",
-  
+  "description": "Engine-agnostic multi-agent swarm \u2014 252 agents from 5 source repos",
   "default_engine": "claude",
-  
   "agents": {
-    "frontend-dev": {
-      "file": "engineering/frontend-dev.md",
+    "manager": {
+      "file": "product/product-manager.md",
       "engine": null,
-      "description": "React/Next.js/Tailwind UI specialist"
+      "source": "product"
     },
-    "backend-dev": {
-      "file": "engineering/backend-dev.md",
+    "sprint-prioritizer": {
+      "file": "product/product-sprint-prioritizer.md",
       "engine": null,
-      "description": "Node.js/API/Database specialist"
+      "source": "product"
     },
-    "devops": {
-      "file": "engineering/devops.md",
+    "feedback-synthesizer": {
+      "file": "product/product-feedback-synthesizer.md",
       "engine": null,
-      "description": "Docker/CI-CD/Deployment specialist"
+      "source": "product"
     },
-    "security": {
-      "file": "engineering/security.md",
+    "behavioral-nudge-engine": {
+      "file": "product/product-behavioral-nudge-engine.md",
       "engine": null,
-      "description": "Security audit specialist"
+      "source": "product"
     },
-    "qa-tester": {
-      "file": "engineering/qa-tester.md",
+    "trend-researcher": {
+      "file": "product/product-trend-researcher.md",
       "engine": null,
-      "description": "Testing specialist"
+      "source": "product"
+    },
+    "account-strategist": {
+      "file": "sales/sales-account-strategist.md",
+      "engine": null,
+      "source": "sales"
+    },
+    "outbound-strategist": {
+      "file": "sales/sales-outbound-strategist.md",
+      "engine": null,
+      "source": "sales"
+    },
+    "engineer": {
+      "file": "sales/sales-engineer.md",
+      "engine": null,
+      "source": "sales"
+    },
+    "discovery-coach": {
+      "file": "sales/sales-discovery-coach.md",
+      "engine": null,
+      "source": "sales"
+    },
+    "proposal-strategist": {
+      "file": "sales/sales-proposal-strategist.md",
+      "engine": null,
+      "source": "sales"
+    },
+    "coach": {
+      "file": "sales/sales-coach.md",
+      "engine": null,
+      "source": "sales"
+    },
+    "pipeline-analyst": {
+      "file": "sales/sales-pipeline-analyst.md",
+      "engine": null,
+      "source": "sales"
+    },
+    "deal-strategist": {
+      "file": "sales/sales-deal-strategist.md",
+      "engine": null,
+      "source": "sales"
+    },
+    "codebase-mapper": {
+      "file": "gsd/gsd-codebase-mapper.md",
+      "engine": null,
+      "source": "gsd"
+    },
+    "ui-researcher": {
+      "file": "gsd/gsd-ui-researcher.md",
+      "engine": null,
+      "source": "gsd"
+    },
+    "nyquist-auditor": {
+      "file": "gsd/gsd-nyquist-auditor.md",
+      "engine": null,
+      "source": "gsd"
+    },
+    "planner": {
+      "file": "ecc/planner.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "assumptions-analyzer": {
+      "file": "gsd/gsd-assumptions-analyzer.md",
+      "engine": null,
+      "source": "gsd"
+    },
+    "phase-researcher": {
+      "file": "gsd/gsd-phase-researcher.md",
+      "engine": null,
+      "source": "gsd"
+    },
+    "roadmapper": {
+      "file": "gsd/gsd-roadmapper.md",
+      "engine": null,
+      "source": "gsd"
+    },
+    "ui-checker": {
+      "file": "gsd/gsd-ui-checker.md",
+      "engine": null,
+      "source": "gsd"
+    },
+    "research-synthesizer": {
+      "file": "gsd/gsd-research-synthesizer.md",
+      "engine": null,
+      "source": "gsd"
+    },
+    "ui-auditor": {
+      "file": "gsd/gsd-ui-auditor.md",
+      "engine": null,
+      "source": "gsd"
+    },
+    "integration-checker": {
+      "file": "gsd/gsd-integration-checker.md",
+      "engine": null,
+      "source": "gsd"
+    },
+    "executor": {
+      "file": "gsd/gsd-executor.md",
+      "engine": null,
+      "source": "gsd"
+    },
+    "verifier": {
+      "file": "gsd/gsd-verifier.md",
+      "engine": null,
+      "source": "gsd"
+    },
+    "user-profiler": {
+      "file": "gsd/gsd-user-profiler.md",
+      "engine": null,
+      "source": "gsd"
+    },
+    "plan-checker": {
+      "file": "gsd/gsd-plan-checker.md",
+      "engine": null,
+      "source": "gsd"
+    },
+    "debugger": {
+      "file": "gsd/gsd-debugger.md",
+      "engine": null,
+      "source": "gsd"
+    },
+    "project-researcher": {
+      "file": "gsd/gsd-project-researcher.md",
+      "engine": null,
+      "source": "gsd"
+    },
+    "advisor-researcher": {
+      "file": "gsd/gsd-advisor-researcher.md",
+      "engine": null,
+      "source": "gsd"
+    },
+    "kuaishou-strategist": {
+      "file": "marketing/marketing-kuaishou-strategist.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "wechat-official-account": {
+      "file": "marketing/marketing-wechat-official-account.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "carousel-growth-engine": {
+      "file": "marketing/marketing-carousel-growth-engine.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "podcast-strategist": {
+      "file": "marketing/marketing-podcast-strategist.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "douyin-strategist": {
+      "file": "marketing/marketing-douyin-strategist.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "china-market-localization-strategist": {
+      "file": "marketing/marketing-china-market-localization-strategist.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "zhihu-strategist": {
+      "file": "marketing/marketing-zhihu-strategist.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "short-video-editing-coach": {
+      "file": "marketing/marketing-short-video-editing-coach.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "xiaohongshu-specialist": {
+      "file": "marketing/marketing-xiaohongshu-specialist.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "baidu-seo-specialist": {
+      "file": "marketing/marketing-baidu-seo-specialist.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "instagram-curator": {
+      "file": "marketing/marketing-instagram-curator.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "livestream-commerce-coach": {
+      "file": "marketing/marketing-livestream-commerce-coach.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "seo-specialist": {
+      "file": "marketing/marketing-seo-specialist.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "weibo-strategist": {
+      "file": "marketing/marketing-weibo-strategist.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "growth-hacker": {
+      "file": "marketing/marketing-growth-hacker.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "video-optimization-specialist": {
+      "file": "marketing/marketing-video-optimization-specialist.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "content-creator": {
+      "file": "marketing/marketing-content-creator.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "ai-citation-strategist": {
+      "file": "marketing/marketing-ai-citation-strategist.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "private-domain-operator": {
+      "file": "marketing/marketing-private-domain-operator.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "reddit-community-builder": {
+      "file": "marketing/marketing-reddit-community-builder.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "social-media-strategist": {
+      "file": "marketing/marketing-social-media-strategist.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "china-ecommerce-operator": {
+      "file": "marketing/marketing-china-ecommerce-operator.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "book-co-author": {
+      "file": "marketing/marketing-book-co-author.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "tiktok-strategist": {
+      "file": "marketing/marketing-tiktok-strategist.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "cross-border-ecommerce": {
+      "file": "marketing/marketing-cross-border-ecommerce.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "app-store-optimizer": {
+      "file": "marketing/marketing-app-store-optimizer.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "bilibili-content-strategist": {
+      "file": "marketing/marketing-bilibili-content-strategist.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "twitter-engager": {
+      "file": "marketing/marketing-twitter-engager.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "linkedin-content-creator": {
+      "file": "marketing/marketing-linkedin-content-creator.md",
+      "engine": null,
+      "source": "marketing"
+    },
+    "game-designer": {
+      "file": "game-development/game-designer.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "game-audio-engineer": {
+      "file": "game-development/game-audio-engineer.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "narrative-designer": {
+      "file": "game-development/narrative-designer.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "technical-artist": {
+      "file": "game-development/technical-artist.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "level-designer": {
+      "file": "game-development/level-designer.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "unreal-systems-engineer": {
+      "file": "game-development/unreal-engine/unreal-systems-engineer.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "unreal-multiplayer-architect": {
+      "file": "game-development/unreal-engine/unreal-multiplayer-architect.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "unreal-technical-artist": {
+      "file": "game-development/unreal-engine/unreal-technical-artist.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "unreal-world-builder": {
+      "file": "game-development/unreal-engine/unreal-world-builder.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "roblox-systems-scripter": {
+      "file": "game-development/roblox-studio/roblox-systems-scripter.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "roblox-experience-designer": {
+      "file": "game-development/roblox-studio/roblox-experience-designer.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "roblox-avatar-creator": {
+      "file": "game-development/roblox-studio/roblox-avatar-creator.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "blender-addon-engineer": {
+      "file": "game-development/blender/blender-addon-engineer.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "godot-shader-developer": {
+      "file": "game-development/godot/godot-shader-developer.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "godot-multiplayer-engineer": {
+      "file": "game-development/godot/godot-multiplayer-engineer.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "godot-gameplay-scripter": {
+      "file": "game-development/godot/godot-gameplay-scripter.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "unity-multiplayer-engineer": {
+      "file": "game-development/unity/unity-multiplayer-engineer.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "unity-editor-tool-developer": {
+      "file": "game-development/unity/unity-editor-tool-developer.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "unity-architect": {
+      "file": "game-development/unity/unity-architect.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "unity-shader-graph-artist": {
+      "file": "game-development/unity/unity-shader-graph-artist.md",
+      "engine": null,
+      "source": "game-development"
+    },
+    "workflow-optimizer": {
+      "file": "testing/testing-workflow-optimizer.md",
+      "engine": null,
+      "source": "testing"
+    },
+    "test-results-analyzer": {
+      "file": "testing/testing-test-results-analyzer.md",
+      "engine": null,
+      "source": "testing"
+    },
+    "performance-benchmarker": {
+      "file": "testing/testing-performance-benchmarker.md",
+      "engine": null,
+      "source": "testing"
+    },
+    "accessibility-auditor": {
+      "file": "testing/testing-accessibility-auditor.md",
+      "engine": null,
+      "source": "testing"
+    },
+    "tool-evaluator": {
+      "file": "testing/testing-tool-evaluator.md",
+      "engine": null,
+      "source": "testing"
+    },
+    "reality-checker": {
+      "file": "testing/testing-reality-checker.md",
+      "engine": null,
+      "source": "testing"
+    },
+    "evidence-collector": {
+      "file": "testing/testing-evidence-collector.md",
+      "engine": null,
+      "source": "testing"
+    },
+    "api-tester": {
+      "file": "testing/testing-api-tester.md",
+      "engine": null,
+      "source": "testing"
+    },
+    "README": {
+      "file": "integrations/mcp-memory/README.md",
+      "engine": null,
+      "source": "integrations"
+    },
+    "backend-architect-with-memory": {
+      "file": "integrations/mcp-memory/backend-architect-with-memory.md",
+      "engine": null,
+      "source": "integrations"
     },
     "project-manager": {
       "file": "management/project-manager.md",
       "engine": null,
-      "description": "Task breakdown & coordination"
+      "source": "management"
     },
     "tech-lead": {
       "file": "management/tech-lead.md",
       "engine": null,
-      "description": "Architecture decisions & code review"
+      "source": "management"
+    },
+    "legal-compliance-checker": {
+      "file": "support/support-legal-compliance-checker.md",
+      "engine": null,
+      "source": "support"
+    },
+    "finance-tracker": {
+      "file": "support/support-finance-tracker.md",
+      "engine": null,
+      "source": "support"
+    },
+    "infrastructure-maintainer": {
+      "file": "support/support-infrastructure-maintainer.md",
+      "engine": null,
+      "source": "support"
+    },
+    "executive-summary-generator": {
+      "file": "support/support-executive-summary-generator.md",
+      "engine": null,
+      "source": "support"
+    },
+    "responder": {
+      "file": "support/support-support-responder.md",
+      "engine": null,
+      "source": "support"
+    },
+    "analytics-reporter": {
+      "file": "support/support-analytics-reporter.md",
+      "engine": null,
+      "source": "support"
+    },
+    "corporate-training-designer": {
+      "file": "specialized/corporate-training-designer.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "mcp-builder": {
+      "file": "specialized/specialized-mcp-builder.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "zk-steward": {
+      "file": "specialized/zk-steward.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "report-distribution-agent": {
+      "file": "specialized/report-distribution-agent.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "accounts-payable-agent": {
+      "file": "specialized/accounts-payable-agent.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "developer-advocate": {
+      "file": "specialized/specialized-developer-advocate.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "lsp-index-engineer": {
+      "file": "specialized/lsp-index-engineer.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "data-extraction-agent": {
+      "file": "specialized/sales-data-extraction-agent.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "blockchain-security-auditor": {
+      "file": "specialized/blockchain-security-auditor.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "workflow-architect": {
+      "file": "specialized/specialized-workflow-architect.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "healthcare-compliance": {
+      "file": "specialized/healthcare-marketing-compliance.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "government-digital-preconsultant": {
+      "file": "specialized/government-digital-presales-consultant.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "cultural-intelligence-strategist": {
+      "file": "specialized/specialized-cultural-intelligence-strategist.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "french-consulting-market": {
+      "file": "specialized/specialized-french-consulting-market.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "salesforce-architect": {
+      "file": "specialized/specialized-salesforce-architect.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "automation-governance-architect": {
+      "file": "specialized/automation-governance-architect.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "agentic-identity-trust": {
+      "file": "specialized/agentic-identity-trust.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "recruitment-specialist": {
+      "file": "specialized/recruitment-specialist.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "supply-chain-strategist": {
+      "file": "specialized/supply-chain-strategist.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "identity-graph-operator": {
+      "file": "specialized/identity-graph-operator.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "data-consolidation-agent": {
+      "file": "specialized/data-consolidation-agent.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "civil-engineer": {
+      "file": "specialized/specialized-civil-engineer.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "agents-orchestrator": {
+      "file": "specialized/agents-orchestrator.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "study-abroad-advisor": {
+      "file": "specialized/study-abroad-advisor.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "model-qa": {
+      "file": "specialized/specialized-model-qa.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "document-generator": {
+      "file": "specialized/specialized-document-generator.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "korean-business-navigator": {
+      "file": "specialized/specialized-korean-business-navigator.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "compliance-auditor": {
+      "file": "specialized/compliance-auditor.md",
+      "engine": null,
+      "source": "specialized"
+    },
+    "macos-spatial-metal-engineer": {
+      "file": "spatial-computing/macos-spatial-metal-engineer.md",
+      "engine": null,
+      "source": "spatial-computing"
+    },
+    "xr-interface-architect": {
+      "file": "spatial-computing/xr-interface-architect.md",
+      "engine": null,
+      "source": "spatial-computing"
+    },
+    "terminal-integration-specialist": {
+      "file": "spatial-computing/terminal-integration-specialist.md",
+      "engine": null,
+      "source": "spatial-computing"
+    },
+    "xr-cockpit-interaction-specialist": {
+      "file": "spatial-computing/xr-cockpit-interaction-specialist.md",
+      "engine": null,
+      "source": "spatial-computing"
+    },
+    "xr-immersive-developer": {
+      "file": "spatial-computing/xr-immersive-developer.md",
+      "engine": null,
+      "source": "spatial-computing"
+    },
+    "visionos-spatial-engineer": {
+      "file": "spatial-computing/visionos-spatial-engineer.md",
+      "engine": null,
+      "source": "spatial-computing"
+    },
+    "QUICKSTART": {
+      "file": "strategy/QUICKSTART.md",
+      "engine": null,
+      "source": "strategy"
+    },
+    "nexus-strategy": {
+      "file": "strategy/nexus-strategy.md",
+      "engine": null,
+      "source": "strategy"
+    },
+    "EXECUTIVE-BRIEF": {
+      "file": "strategy/EXECUTIVE-BRIEF.md",
+      "engine": null,
+      "source": "strategy"
+    },
+    "handoff-templates": {
+      "file": "strategy/coordination/handoff-templates.md",
+      "engine": null,
+      "source": "strategy"
+    },
+    "agent-activation-prompts": {
+      "file": "strategy/coordination/agent-activation-prompts.md",
+      "engine": null,
+      "source": "strategy"
+    },
+    "scenario-startup-mvp": {
+      "file": "strategy/runbooks/scenario-startup-mvp.md",
+      "engine": null,
+      "source": "strategy"
+    },
+    "scenario-campaign": {
+      "file": "strategy/runbooks/scenario-marketing-campaign.md",
+      "engine": null,
+      "source": "strategy"
+    },
+    "scenario-incident-response": {
+      "file": "strategy/runbooks/scenario-incident-response.md",
+      "engine": null,
+      "source": "strategy"
+    },
+    "scenario-enterprise-feature": {
+      "file": "strategy/runbooks/scenario-enterprise-feature.md",
+      "engine": null,
+      "source": "strategy"
+    },
+    "phase-0-discovery": {
+      "file": "strategy/playbooks/phase-0-discovery.md",
+      "engine": null,
+      "source": "strategy"
+    },
+    "phase-3-build": {
+      "file": "strategy/playbooks/phase-3-build.md",
+      "engine": null,
+      "source": "strategy"
+    },
+    "phase-6-operate": {
+      "file": "strategy/playbooks/phase-6-operate.md",
+      "engine": null,
+      "source": "strategy"
+    },
+    "phase-1-strategy": {
+      "file": "strategy/playbooks/phase-1-strategy.md",
+      "engine": null,
+      "source": "strategy"
+    },
+    "phase-2-foundation": {
+      "file": "strategy/playbooks/phase-2-foundation.md",
+      "engine": null,
+      "source": "strategy"
+    },
+    "phase-5-launch": {
+      "file": "strategy/playbooks/phase-5-launch.md",
+      "engine": null,
+      "source": "strategy"
+    },
+    "phase-4-hardening": {
+      "file": "strategy/playbooks/phase-4-hardening.md",
+      "engine": null,
+      "source": "strategy"
+    },
+    "code-reviewer": {
+      "file": "ecc/code-reviewer.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "data-engineer": {
+      "file": "engineering/engineering-data-engineer.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "frontend-dev": {
+      "file": "engineering/frontend-dev.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "security-engineer": {
+      "file": "engineering/engineering-security-engineer.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "software-architect": {
+      "file": "engineering/engineering-software-architect.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "database-optimizer": {
+      "file": "engineering/engineering-database-optimizer.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "email-intelligence-engineer": {
+      "file": "engineering/engineering-email-intelligence-engineer.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "backend-dev": {
+      "file": "engineering/backend-dev.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "devops-automator": {
+      "file": "engineering/engineering-devops-automator.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "embedded-firmware-engineer": {
+      "file": "engineering/engineering-embedded-firmware-engineer.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "threat-detection-engineer": {
+      "file": "engineering/engineering-threat-detection-engineer.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "qa-tester": {
+      "file": "engineering/qa-tester.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "technical-writer": {
+      "file": "engineering/engineering-technical-writer.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "mobile-app-builder": {
+      "file": "engineering/engineering-mobile-app-builder.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "devops": {
+      "file": "engineering/devops.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "filament-optimization-specialist": {
+      "file": "engineering/engineering-filament-optimization-specialist.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "senior-developer": {
+      "file": "engineering/engineering-senior-developer.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "incident-response-commander": {
+      "file": "engineering/engineering-incident-response-commander.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "git-workflow-master": {
+      "file": "engineering/engineering-git-workflow-master.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "backend-architect": {
+      "file": "engineering/engineering-backend-architect.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "wechat-mini-program-developer": {
+      "file": "engineering/engineering-wechat-mini-program-developer.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "feishu-integration-developer": {
+      "file": "engineering/engineering-feishu-integration-developer.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "rapid-prototyper": {
+      "file": "engineering/engineering-rapid-prototyper.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "cms-developer": {
+      "file": "engineering/engineering-cms-developer.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "autonomous-optimization-architect": {
+      "file": "engineering/engineering-autonomous-optimization-architect.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "security": {
+      "file": "engineering/security.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "frontend-developer": {
+      "file": "engineering/engineering-frontend-developer.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "sre": {
+      "file": "engineering/engineering-sre.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "ai-data-remediation-engineer": {
+      "file": "engineering/engineering-ai-data-remediation-engineer.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "solidity-smart-contract-engineer": {
+      "file": "engineering/engineering-solidity-smart-contract-engineer.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "ai-engineer": {
+      "file": "engineering/engineering-ai-engineer.md",
+      "engine": null,
+      "source": "engineering"
+    },
+    "kotlin-build-resolver": {
+      "file": "ecc/kotlin-build-resolver.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "harness-optimizer": {
+      "file": "ecc/harness-optimizer.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "database-reviewer": {
+      "file": "ecc/database-reviewer.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "chief-of-staff": {
+      "file": "ecc/chief-of-staff.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "loop-operator": {
+      "file": "ecc/loop-operator.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "pytorch-build-resolver": {
+      "file": "ecc/pytorch-build-resolver.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "flutter-reviewer": {
+      "file": "ecc/flutter-reviewer.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "rust-build-resolver": {
+      "file": "ecc/rust-build-resolver.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "tdd-guide": {
+      "file": "ecc/tdd-guide.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "healthcare-reviewer": {
+      "file": "ecc/healthcare-reviewer.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "gan-evaluator": {
+      "file": "ecc/gan-evaluator.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "performance-optimizer": {
+      "file": "ecc/performance-optimizer.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "build-error-resolver": {
+      "file": "ecc/build-error-resolver.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "doc-updater": {
+      "file": "ecc/doc-updater.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "rust-reviewer": {
+      "file": "ecc/rust-reviewer.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "cpp-build-resolver": {
+      "file": "ecc/cpp-build-resolver.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "go-reviewer": {
+      "file": "ecc/go-reviewer.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "gan-planner": {
+      "file": "ecc/gan-planner.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "python-reviewer": {
+      "file": "ecc/python-reviewer.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "refactor-cleaner": {
+      "file": "ecc/refactor-cleaner.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "java-reviewer": {
+      "file": "ecc/java-reviewer.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "gan-generator": {
+      "file": "ecc/gan-generator.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "architect": {
+      "file": "ecc/architect.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "e2e-runner": {
+      "file": "ecc/e2e-runner.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "kotlin-reviewer": {
+      "file": "ecc/kotlin-reviewer.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "go-build-resolver": {
+      "file": "ecc/go-build-resolver.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "opensource-sanitizer": {
+      "file": "ecc/opensource-sanitizer.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "typescript-reviewer": {
+      "file": "ecc/typescript-reviewer.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "java-build-resolver": {
+      "file": "ecc/java-build-resolver.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "opensource-packager": {
+      "file": "ecc/opensource-packager.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "docs-lookup": {
+      "file": "ecc/docs-lookup.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "security-reviewer": {
+      "file": "ecc/security-reviewer.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "cpp-reviewer": {
+      "file": "ecc/cpp-reviewer.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "opensource-forker": {
+      "file": "ecc/opensource-forker.md",
+      "engine": null,
+      "source": "ecc"
+    },
+    "anthropologist": {
+      "file": "academic/academic-anthropologist.md",
+      "engine": null,
+      "source": "academic"
+    },
+    "narratologist": {
+      "file": "academic/academic-narratologist.md",
+      "engine": null,
+      "source": "academic"
+    },
+    "psychologist": {
+      "file": "academic/academic-psychologist.md",
+      "engine": null,
+      "source": "academic"
+    },
+    "historian": {
+      "file": "academic/academic-historian.md",
+      "engine": null,
+      "source": "academic"
+    },
+    "geographer": {
+      "file": "academic/academic-geographer.md",
+      "engine": null,
+      "source": "academic"
+    },
+    "image-prompt-engineer": {
+      "file": "design/design-image-prompt-engineer.md",
+      "engine": null,
+      "source": "design"
+    },
+    "inclusive-visuals-specialist": {
+      "file": "design/design-inclusive-visuals-specialist.md",
+      "engine": null,
+      "source": "design"
+    },
+    "ux-architect": {
+      "file": "design/design-ux-architect.md",
+      "engine": null,
+      "source": "design"
+    },
+    "brand-guardian": {
+      "file": "design/design-brand-guardian.md",
+      "engine": null,
+      "source": "design"
+    },
+    "visual-storyteller": {
+      "file": "design/design-visual-storyteller.md",
+      "engine": null,
+      "source": "design"
+    },
+    "ux-researcher": {
+      "file": "design/design-ux-researcher.md",
+      "engine": null,
+      "source": "design"
+    },
+    "ui-designer": {
+      "file": "design/design-ui-designer.md",
+      "engine": null,
+      "source": "design"
+    },
+    "whimsy-injector": {
+      "file": "design/design-whimsy-injector.md",
+      "engine": null,
+      "source": "design"
+    },
+    "experiment-tracker": {
+      "file": "project-management/project-management-experiment-tracker.md",
+      "engine": null,
+      "source": "project-management"
+    },
+    "project-shepherd": {
+      "file": "project-management/project-management-project-shepherd.md",
+      "engine": null,
+      "source": "project-management"
+    },
+    "studio-producer": {
+      "file": "project-management/project-management-studio-producer.md",
+      "engine": null,
+      "source": "project-management"
+    },
+    "project-manager-senior": {
+      "file": "project-management/project-manager-senior.md",
+      "engine": null,
+      "source": "project-management"
+    },
+    "studio-operations": {
+      "file": "project-management/project-management-studio-operations.md",
+      "engine": null,
+      "source": "project-management"
+    },
+    "jira-workflow-steward": {
+      "file": "project-management/project-management-jira-workflow-steward.md",
+      "engine": null,
+      "source": "project-management"
+    },
+    "search-query-analyst": {
+      "file": "paid-media/paid-media-search-query-analyst.md",
+      "engine": null,
+      "source": "paid-media"
+    },
+    "programmatic-buyer": {
+      "file": "paid-media/paid-media-programmatic-buyer.md",
+      "engine": null,
+      "source": "paid-media"
+    },
+    "paid-social-strategist": {
+      "file": "paid-media/paid-media-paid-social-strategist.md",
+      "engine": null,
+      "source": "paid-media"
+    },
+    "creative-strategist": {
+      "file": "paid-media/paid-media-creative-strategist.md",
+      "engine": null,
+      "source": "paid-media"
+    },
+    "ppc-strategist": {
+      "file": "paid-media/paid-media-ppc-strategist.md",
+      "engine": null,
+      "source": "paid-media"
+    },
+    "tracking-specialist": {
+      "file": "paid-media/paid-media-tracking-specialist.md",
+      "engine": null,
+      "source": "paid-media"
+    },
+    "auditor": {
+      "file": "paid-media/paid-media-auditor.md",
+      "engine": null,
+      "source": "paid-media"
     }
   },
-  
-  "parallel_max_workers": 4,
+  "parallel_max_workers": 8,
   "timeout_seconds": 600,
-  
-  "custom_engines": {}
+  "sources": {
+    "agency-agents": "https://github.com/msitarzewski/agency-agents",
+    "everything-claude-code": "https://github.com/affaan-m/everything-claude-code",
+    "superpowers": "https://github.com/obra/superpowers",
+    "get-shit-done": "https://github.com/gsd-build/get-shit-done",
+    "claude-mem": "https://github.com/thedotmack/claude-mem"
+  }
 }
