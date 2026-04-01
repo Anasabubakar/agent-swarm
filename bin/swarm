@@ -17,6 +17,8 @@ import { existsSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { platform } from 'os';
+import { createConnection } from 'net';
+import https from 'https';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -45,6 +47,35 @@ function getVersion() {
   } catch {
     return '1.0.0';
   }
+}
+
+// Check for updates
+function checkForUpdates(currentVersion) {
+  return new Promise((resolve) => {
+    const url = 'https://raw.githubusercontent.com/Anasabubakar/agent-swarm/main/package.json';
+    
+    const request = https.get(url, { timeout: 3000 }, (res) => {
+      let data = '';
+      res.on('data', (chunk) => data += chunk);
+      res.on('end', () => {
+        try {
+          const remotePkg = JSON.parse(data);
+          const remoteVersion = remotePkg.version;
+          
+          if (remoteVersion !== currentVersion) {
+            console.log(`\n  ${c.yellow}⚠  Update available: v${currentVersion} → v${remoteVersion}${c.reset}`);
+            console.log(`  ${c.dim}Run: cd ~/.swarm && git pull${c.reset}\n`);
+          }
+          resolve();
+        } catch {
+          resolve(); // Silent fail
+        }
+      });
+    });
+    
+    request.on('error', () => resolve()); // Silent fail on network issues
+    request.on('timeout', () => { request.destroy(); resolve(); });
+  });
 }
 
 // Banner
@@ -145,7 +176,7 @@ function run(args) {
 }
 
 // Main
-function main() {
+async function main() {
   const args = process.argv.slice(2);
 
   // No args — launch interactive CLI
@@ -155,6 +186,11 @@ function main() {
       console.error(`${c.red}Error: Python 3 is required but not found.${c.reset}`);
       process.exit(1);
     }
+    
+    // Check for updates (non-blocking, shows before CLI starts)
+    const currentVersion = getVersion();
+    await checkForUpdates(currentVersion);
+    
     const cliPath = join(SWARM_ROOT, 'src', 'swarm_cli.py');
     if (existsSync(cliPath)) {
       const child = spawn(python, [cliPath], {
