@@ -1,0 +1,50 @@
+{
+  "version": "1.0",
+  "name": "agent-swarm",
+  "description": "Multi-agent swarm system — works with any CLI agent",
+  
+  "default_engine": "claude",
+  
+  "agents": {
+    "frontend-dev": {
+      "file": "engineering/frontend-dev.md",
+      "engine": null,
+      "description": "React/Next.js/Tailwind UI specialist"
+    },
+    "backend-dev": {
+      "file": "engineering/backend-dev.md",
+      "engine": null,
+      "description": "Node.js/API/Database specialist"
+    },
+    "devops": {
+      "file": "engineering/devops.md",
+      "engine": null,
+      "description": "Docker/CI-CD/Deployment specialist"
+    },
+    "security": {
+      "file": "engineering/security.md",
+      "engine": null,
+      "description": "Security audit specialist"
+    },
+    "qa-tester": {
+      "file": "engineering/qa-tester.md",
+      "engine": null,
+      "description": "Testing specialist"
+    },
+    "project-manager": {
+      "file": "management/project-manager.md",
+      "engine": null,
+      "description": "Task breakdown & coordination"
+    },
+    "tech-lead": {
+      "file": "management/tech-lead.md",
+      "engine": null,
+      "description": "Architecture decisions & code review"
+    }
+  },
+  
+  "parallel_max_workers": 4,
+  "timeout_seconds": 600,
+  
+  "custom_engines": {}
+}
