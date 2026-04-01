@@ -148,19 +148,40 @@ function run(args) {
 function main() {
   const args = process.argv.slice(2);
 
-  // No args — interactive mode
+  // No args — launch interactive CLI
   if (args.length === 0) {
-    banner();
-    console.log(`${c.yellow}Tip: Just give me a goal!${c.reset}`);
-    console.log(`${c.cyan}  swarm "Build a todo app"${c.reset}\n`);
+    const cliPath = join(SWARM_ROOT, 'src', 'swarm_cli.py');
+    if (existsSync(cliPath)) {
+      const child = spawn(python, [cliPath], {
+        cwd: process.cwd(),
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          SWARM_ROOT: SWARM_ROOT,
+        },
+      });
+      child.on('exit', (code) => process.exit(code || 0));
+      child.on('error', (err) => {
+        console.error(`${c.red}Error: ${err.message}${c.reset}`);
+        process.exit(1);
+      });
+      return;
+    }
+    // Fallback if CLI not found
     help();
     process.exit(0);
   }
 
   // Help
-  if (args.includes('--help') || args.includes('-h')) {
+  if (args.includes('--help') || args.includes('-h') || args[0] === 'help') {
     help();
     process.exit(0);
+  }
+
+  // Credits
+  if (args[0] === 'credits') {
+    run(['src/swarm_cli.py']); // Credits shown by CLI
+    return;
   }
 
   // Version
