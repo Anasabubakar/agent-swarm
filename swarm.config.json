@@ -1,7 +1,7 @@
 {
-  "version": "2.1",
+  "version": "2.2",
   "name": "agent-swarm",
-  "description": "Engine-agnostic multi-agent swarm \u2014 255 agents, 239 skills, 125 commands",
+  "description": "Engine-agnostic multi-agent swarm \u2014 245 agents, 239 skills, 125 commands",
   "default_engine": "claude",
   "workflow": {
     "phases": [
@@ -11,7 +11,8 @@
       "debug",
       "ship"
     ],
-    "description": "Questionnaire asks clarifying questions \u2192 Planner designs implementation \u2192 Execute dispatches agents \u2192 Debug fixes failures \u2192 Ship does final review"
+    "scout_enabled": true,
+    "description": "Scout gathers inspiration \u2192 Questionnaire clarifies \u2192 Planner designs \u2192 Execute builds \u2192 Debug fixes \u2192 Ship reviews"
   },
   "agents": {
     "product-manager": {
@@ -1228,15 +1229,18 @@
       "file": "core/debugger.md",
       "engine": null,
       "source": "core"
+    },
+    "motion-graphics": {
+      "file": "creative/motion-graphics.md",
+      "engine": null,
+      "source": "creative"
+    },
+    "ui-ux-scout": {
+      "file": "creative/ui-ux-scout.md",
+      "engine": null,
+      "source": "creative"
     }
   },
   "parallel_max_workers": 8,
-  "timeout_seconds": 600,
-  "sources": {
-    "agency-agents": "https://github.com/msitarzewski/agency-agents",
-    "everything-claude-code": "https://github.com/affaan-m/everything-claude-code",
-    "superpowers": "https://github.com/obra/superpowers",
-    "get-shit-done": "https://github.com/gsd-build/get-shit-done",
-    "claude-mem": "https://github.com/thedotmack/claude-mem"
-  }
+  "timeout_seconds": 600
 }
