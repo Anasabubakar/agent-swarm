@@ -453,7 +453,8 @@ def main():
     
     print(f"  {C.t(C.GRN,'✓')} Engine: {C.t(C.B,engine)}")
     if installed:
-        print(f"  {C.t(C.D,f'Available: {", ".join(installed)}')}")
+        eng_list = ", ".join(installed)
+        print(f"  {C.t(C.D,f'Available: {eng_list}')}")
     print(f"  {C.t(C.D,'Type / for commands • ESC to cancel • /quit to exit')}\n")
     
     inp = Input(f"  {C.t(C.GRN,'▸')} ")
