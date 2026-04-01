@@ -108,6 +108,7 @@ def dispatch_agent(
         full_task = f"CONTEXT:\n{context}\n\nTASK:\n{task}"
     
     # Create output directory — in workspace if provided, otherwise in swarm output/
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if workspace:
         run_dir = workspace.get_path() / ".swarm-output" / f"{agent_name}_{timestamp}"
     else:

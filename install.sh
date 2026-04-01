@@ -131,7 +131,7 @@ fi
 echo ""
 echo -e "${GREEN}${BOLD}✅ Agent Swarm v${VERSION} installed successfully!${NC}"
 echo ""
-echo -e "${BOLD}Quick start:${c.reset}"
+echo -e "${BOLD}Quick start:${NC}"
 echo -e "  ${CYAN}swarm${NC}                              # Show help"
 echo -e "  ${CYAN}swarm \"Build a todo app\"${NC}            # Run with a goal"
 echo -e "  ${CYAN}swarm --list-engines${NC}               # Check available engines"
