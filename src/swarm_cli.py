@@ -9,13 +9,17 @@
 ║    ███████║╚███╔███╔╝██║  ██║██║  ██║██║ ╚═╝ ██║         ║
 ║    ╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝         ║
 ║                                                           ║
-║    Interactive Agent Swarm CLI                            ║
+║    Interactive AI Assistant + Agent Swarm                 ║
 ║    by Anas Abubakar                                       ║
 ║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
 
-The main interactive CLI application.
-Opens like Claude Code / Gemini CLI.
+A full AI CLI assistant that can:
+- Answer any question
+- Read and understand files
+- Build projects with multi-agent swarm
+- Execute commands with permission
+- Auto-update
 """
 
 import sys
@@ -28,10 +32,10 @@ import time
 import signal
 import tty
 import termios
-import select
+import glob as globmod
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, Callable
+from typing import Optional
 
 # ═══════════════════════════════════════════════════════
 # PATHS
@@ -47,332 +51,370 @@ CHAT_HISTORY_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ═══════════════════════════════════════════════════════
-# TERMINAL HELPERS
+# COLORS
 # ═══════════════════════════════════════════════════════
 
-class Term:
-    """Low-level terminal control"""
-    
-    RESET = "\033[0m"
-    BOLD = "\033[1m"
-    DIM = "\033[2m"
-    ITALIC = "\033[3m"
-    
-    # Colors
-    BLACK = "\033[30m"
-    RED = "\033[31m"
-    GREEN = "\033[32m"
-    YELLOW = "\033[33m"
-    BLUE = "\033[34m"
-    MAGENTA = "\033[35m"
-    CYAN = "\033[36m"
-    WHITE = "\033[37m"
-    
-    # Bright
-    BRED = "\033[91m"
-    BGREEN = "\033[92m"
-    BYELLOW = "\033[93m"
-    BBLUE = "\033[94m"
-    BMAGENTA = "\033[95m"
-    BCYAN = "\033[96m"
-    BWHITE = "\033[97m"
-    
-    # Background
-    BG_BLACK = "\033[40m"
-    BG_RED = "\033[41m"
-    BG_GREEN = "\033[42m"
-    BG_BLUE = "\033[44m"
-    BG_MAGENTA = "\033[45m"
-    BG_CYAN = "\033[46m"
+class C:
+    R = "\033[0m"    # Reset
+    B = "\033[1m"    # Bold
+    D = "\033[2m"    # Dim
+    RED = "\033[91m"
+    GRN = "\033[92m"
+    YLW = "\033[93d"
+    BLU = "\033[94m"
+    MAG = "\033[95m"
+    CYN = "\033[96m"
+    WHT = "\033[97m"
     
     @staticmethod
-    def clear():
-        os.system('clear' if os.name != 'nt' else 'cls')
-    
-    @staticmethod
-    def move_up(n=1):
-        sys.stdout.write(f"\033[{n}A")
-    
-    @staticmethod
-    def clear_line():
-        sys.stdout.write("\r\033[K")
-    
-    @staticmethod
-    def hide_cursor():
-        sys.stdout.write("\033[?25l")
-    
-    @staticmethod
-    def show_cursor():
-        sys.stdout.write("\033[?25h")
-    
-    @staticmethod
-    def flush():
-        sys.stdout.flush()
-
-
-T = Term
+    def t(color, text): return f"{color}{text}{C.R}"
 
 
 # ═══════════════════════════════════════════════════════
-# AVAILABLE ENGINES AND MODELS
+# PERMISSION SYSTEM
 # ═══════════════════════════════════════════════════════
 
-ENGINES = {
-    "auto": {"name": "Auto-detect", "description": "Detect best available engine automatically"},
-    "claude": {
-        "name": "Claude Code",
-        "command": "claude",
-        "models": ["claude-opus-4", "claude-sonnet-4", "claude-haiku", "auto"],
-    },
-    "gemini": {
-        "name": "Gemini CLI",
-        "command": "gemini",
-        "models": ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash", "auto"],
-    },
-    "kilo": {
-        "name": "Kilo Code",
-        "command": "kilo",
-        "models": ["kilo-auto", "kilo-pro", "auto"],
-    },
-    "codex": {
-        "name": "Codex",
-        "command": "codex",
-        "models": ["o4-mini", "o3", "gpt-4.1", "auto"],
-    },
-    "aider": {
-        "name": "Aider",
-        "command": "aider",
-        "models": ["claude-sonnet-4", "gpt-4.1", "auto"],
-    },
-}
-
-
-def detect_installed_engines() -> list:
-    """Find which engines are actually installed"""
-    import shutil
-    installed = []
-    for key, eng in ENGINES.items():
-        if key == "auto":
-            continue
-        if shutil.which(eng["command"]):
-            installed.append(key)
-    return installed
-
-
-# ═══════════════════════════════════════════════════════
-# INTERACTIVE MENU
-# ═══════════════════════════════════════════════════════
-
-class InteractiveMenu:
-    """Arrow-key navigable menu"""
+class PermissionManager:
+    """Manages what actions are allowed without asking"""
     
-    def __init__(self, title: str, options: list, descriptions: list = None):
-        self.title = title
-        self.options = options
-        self.descriptions = descriptions or [""] * len(options)
-        self.selected = 0
+    def __init__(self, project_dir: str = "."):
+        self.project_dir = Path(project_dir)
+        self.perm_file = self.project_dir / ".swarm-permissions.json"
+        self.always_allow = self._load()
     
-    def show(self) -> int:
-        """Show menu and return selected index. Returns -1 on ESC."""
-        T.hide_cursor()
-        try:
-            while True:
-                # Draw menu
-                print(f"\n  {T.BOLD}{T.BCYAN}{self.title}{T.RESET}")
-                print(f"  {T.DIM}{'─' * 40}{T.RESET}")
-                
-                for i, opt in enumerate(self.options):
-                    if i == self.selected:
-                        prefix = f"  {T.BGREEN}▸{T.RESET}"
-                        style = f"{T.BOLD}{T.BWHITE}"
-                        desc = f"  {T.DIM}{self.descriptions[i]}{T.RESET}" if self.descriptions[i] else ""
-                    else:
-                        prefix = f"  {T.DIM} {T.RESET}"
-                        style = f"{T.DIM}"
-                        desc = ""
-                    
-                    print(f"{prefix} {style}{opt}{T.RESET}{desc}")
-                
-                print(f"\n  {T.DIM}↑/↓ navigate • Enter select • ESC cancel{T.RESET}")
-                
-                # Read key
-                key = self._read_key()
-                
-                # Clear menu
-                for _ in range(len(self.options) + 4):
-                    T.move_up()
-                    T.clear_line()
-                
-                if key == "UP":
-                    self.selected = (self.selected - 1) % len(self.options)
-                elif key == "DOWN":
-                    self.selected = (self.selected + 1) % len(self.options)
-                elif key == "ENTER":
-                    return self.selected
-                elif key == "ESC":
-                    return -1
-        finally:
-            T.show_cursor()
+    def _load(self) -> set:
+        if self.perm_file.exists():
+            try:
+                data = json.loads(self.perm_file.read_text())
+                return set(data.get("always_allow", []))
+            except:
+                return set()
+        return set()
     
-    def _read_key(self) -> str:
-        """Read a single keypress"""
+    def _save(self):
+        self.perm_file.write_text(json.dumps({
+            "always_allow": list(self.always_allow)
+        }, indent=2))
+    
+    def is_allowed(self, action_type: str) -> bool:
+        return action_type in self.always_allow
+    
+    def set_always_allow(self, action_type: str):
+        self.always_allow.add(action_type)
+        self._save()
+    
+    def ask_permission(self, action_type: str, description: str) -> str:
+        """
+        Ask user for permission. Returns: yes, always, no, edit
+        """
+        if self.is_allowed(action_type):
+            return "yes"
+        
+        print(f"\n  {C.t(C.YLW, '⚠ Permission Required')}")
+        print(f"  {C.t(C.D, description)}")
+        print()
+        print(f"  {C.t(C.CYN, '[y]')} Yes, proceed this time")
+        print(f"  {C.t(C.CYN, '[a]')} Always allow this type ({action_type})")
+        print(f"  {C.t(C.CYN, '[n]')} No, skip this")
+        print(f"  {C.t(C.CYN, '[e]')} Tell me what to do instead")
+        print()
+        
         fd = sys.stdin.fileno()
         old = termios.tcgetattr(fd)
         try:
             tty.setraw(fd)
-            ch = sys.stdin.read(1)
-            if ch == '\x1b':
-                ch2 = sys.stdin.read(1)
-                if ch2 == '[':
-                    ch3 = sys.stdin.read(1)
-                    if ch3 == 'A': return "UP"
-                    if ch3 == 'B': return "DOWN"
-                    if ch3 == 'C': return "RIGHT"
-                    if ch3 == 'D': return "LEFT"
-                return "ESC"
-            elif ch == '\r' or ch == '\n':
-                return "ENTER"
-            elif ch == '\x03':
-                raise KeyboardInterrupt
-            return ch
+            while True:
+                sys.stdout.write(f"  {C.t(C.WHT, '?')} Your choice: ")
+                sys.stdout.flush()
+                ch = sys.stdin.read(1).lower()
+                print(ch)
+                
+                if ch == 'y': return "yes"
+                elif ch == 'a':
+                    self.set_always_allow(action_type)
+                    return "yes"
+                elif ch == 'n': return "no"
+                elif ch == 'e': return "edit"
+                elif ch == '\x03': return "no"
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
 
 # ═══════════════════════════════════════════════════════
-# APPROVAL DIALOG
+# FILE READER
 # ═══════════════════════════════════════════════════════
 
-class ApprovalDialog:
-    """Interactive approval for agent actions"""
+class FileReader:
+    """Read and understand files in the project"""
     
-    OPTIONS = [
-        ("y", "Yes, proceed"),
-        ("p", "Proceed and don't ask again for this project"),
-        ("s", "Skip this step"),
-        ("d", "Deny"),
-        ("e", "Deny and tell agent what to do instead"),
+    @staticmethod
+    def read(file_path: str, max_lines: int = 200) -> str:
+        """Read a file and return its contents"""
+        try:
+            path = Path(file_path)
+            if not path.exists():
+                return f"File not found: {file_path}"
+            
+            if path.is_dir():
+                return FileReader.list_directory(file_path)
+            
+            content = path.read_text(encoding='utf-8', errors='replace')
+            lines = content.split('\n')
+            
+            if len(lines) > max_lines:
+                truncated = '\n'.join(lines[:max_lines])
+                return f"{truncated}\n\n... ({len(lines) - max_lines} more lines)"
+            
+            return content
+        except Exception as e:
+            return f"Error reading {file_path}: {e}"
+    
+    @staticmethod
+    def list_directory(dir_path: str = ".", pattern: str = "*") -> str:
+        """List files in a directory"""
+        try:
+            path = Path(dir_path)
+            if not path.exists():
+                return f"Directory not found: {dir_path}"
+            
+            items = []
+            for item in sorted(path.iterdir()):
+                if item.name.startswith('.'):
+                    continue
+                icon = "📁" if item.is_dir() else "📄"
+                items.append(f"  {icon} {item.name}")
+            
+            if not items:
+                return f"Empty directory: {dir_path}"
+            
+            return f"Contents of {dir_path}:\n" + '\n'.join(items[:50])
+        except Exception as e:
+            return f"Error listing {dir_path}: {e}"
+    
+    @staticmethod
+    def find(pattern: str, directory: str = ".") -> str:
+        """Find files matching a pattern"""
+        try:
+            matches = list(Path(directory).rglob(pattern))
+            if not matches:
+                return f"No files matching: {pattern}"
+            
+            result = [f"  {m.relative_to(directory)}" for m in matches[:30]]
+            return f"Found {len(matches)} files matching '{pattern}':\n" + '\n'.join(result)
+        except Exception as e:
+            return f"Error searching: {e}"
+    
+    @staticmethod
+    def search_text(query: str, directory: str = ".", extensions: list = None) -> str:
+        """Search for text in files"""
+        try:
+            if extensions is None:
+                extensions = ['.py', '.js', '.ts', '.tsx', '.jsx', '.md', '.json', '.yaml', '.yml', '.html', '.css']
+            
+            results = []
+            for ext in extensions:
+                for f in Path(directory).rglob(f"*{ext}"):
+                    if '.git' in str(f) or 'node_modules' in str(f):
+                        continue
+                    try:
+                        content = f.read_text(errors='replace')
+                        for i, line in enumerate(content.split('\n'), 1):
+                            if query.lower() in line.lower():
+                                results.append(f"  {f.relative_to(directory)}:{i}: {line.strip()[:80]}")
+                                if len(results) >= 20:
+                                    break
+                    except:
+                        pass
+                    if len(results) >= 20:
+                        break
+            
+            if not results:
+                return f"No matches for '{query}'"
+            
+            return f"Search results for '{query}':\n" + '\n'.join(results)
+        except Exception as e:
+            return f"Error searching: {e}"
+
+
+# ═══════════════════════════════════════════════════════
+# COMMAND EXECUTOR
+# ═══════════════════════════════════════════════════════
+
+class CommandRunner:
+    """Run CLI commands with permission"""
+    
+    SAFE_COMMANDS = [
+        'ls', 'cat', 'head', 'tail', 'grep', 'find', 'pwd', 'whoami',
+        'date', 'echo', 'wc', 'sort', 'uniq', 'file', 'which',
+        'git status', 'git log', 'git diff', 'git branch', 'git show',
+        'npm list', 'npm ls', 'node --version', 'python --version',
+        'pip list', 'pip freeze', 'docker ps', 'docker images',
+    ]
+    
+    DANGEROUS_COMMANDS = [
+        'rm ', 'rm -', 'rmdir', 'git push', 'git reset --hard',
+        'npm install', 'npm uninstall', 'pip install', 'pip uninstall',
+        'chmod', 'chown', 'sudo', 'docker run', 'docker rm',
+    ]
+    
+    BLOCKED = [
+        'rm -rf /', 'shutdown', 'reboot', ':(){', 'mkfs',
+    ]
+    
+    def __init__(self, permissions: PermissionManager, cwd: str = "."):
+        self.permissions = permissions
+        self.cwd = cwd
+    
+    def classify(self, cmd: str) -> str:
+        cmd_lower = cmd.lower().strip()
+        for b in self.BLOCKED:
+            if b in cmd_lower:
+                return "blocked"
+        for d in self.DANGEROUS_COMMANDS:
+            if cmd_lower.startswith(d):
+                return "dangerous"
+        return "safe"
+    
+    def run(self, command: str, timeout: int = 120) -> dict:
+        """Execute a command, asking permission if needed"""
+        safety = self.classify(command)
+        
+        if safety == "blocked":
+            return {"success": False, "error": "Blocked for safety", "output": ""}
+        
+        if safety == "dangerous":
+            perm = self.permissions.ask_permission(
+                "run_dangerous_command",
+                f"Run command: {command}"
+            )
+            if perm == "no":
+                return {"success": False, "error": "Denied by user", "output": ""}
+            if perm == "edit":
+                return {"success": False, "error": "User wants to edit", "output": ""}
+        
+        try:
+            result = subprocess.run(
+                command, shell=True, capture_output=True,
+                text=True, timeout=timeout, cwd=self.cwd
+            )
+            return {
+                "success": result.returncode == 0,
+                "output": result.stdout,
+                "error": result.stderr,
+                "code": result.returncode,
+            }
+        except subprocess.TimeoutExpired:
+            return {"success": False, "error": "Timed out", "output": ""}
+        except Exception as e:
+            return {"success": False, "error": str(e), "output": ""}
+
+
+# ═══════════════════════════════════════════════════════
+# ENGINE DETECTION
+# ═══════════════════════════════════════════════════════
+
+ENGINES = {
+    "auto": {"name": "Auto-detect"},
+    "claude": {"name": "Claude Code", "cmd": "claude", "models": ["claude-opus-4", "claude-sonnet-4"]},
+    "gemini": {"name": "Gemini CLI", "cmd": "gemini", "models": ["gemini-2.5-pro", "gemini-2.5-flash"]},
+    "kilo": {"name": "Kilo Code", "cmd": "kilo", "models": ["kilo-auto"]},
+    "codex": {"name": "Codex", "cmd": "codex", "models": ["o4-mini", "o3"]},
+}
+
+def detect_engines() -> list:
+    import shutil
+    return [k for k, v in ENGINES.items() if k != "auto" and v.get("cmd") and shutil.which(v["cmd"])]
+
+
+# ═══════════════════════════════════════════════════════
+# ACTION DETECTOR
+# ═══════════════════════════════════════════════════════
+
+class ActionDetector:
+    """Detect if input is a question, file operation, or build task"""
+    
+    BUILD_KEYWORDS = [
+        "build", "create", "make", "develop", "implement", "code",
+        "scaffold", "setup", "generate", "write code", "program",
+        "landing page", "website", "app", "api", "dashboard",
+        "todo", "calculator", "chat", "login", "signup",
+    ]
+    
+    FILE_KEYWORDS = [
+        "read", "open", "show", "cat", "view", "look at",
+        "what's in", "what is in", "explain this code",
+        "what does", "how does", "understand",
+    ]
+    
+    CMD_KEYWORDS = [
+        "run", "execute", "install", "start", "build", "test",
+        "deploy", "push", "commit", "npm", "pip", "docker",
     ]
     
     @staticmethod
-    def show(action_description: str) -> str:
-        """
-        Show approval dialog. Returns one of: y, p, s, d, e
-        """
-        print(f"\n  {T.BYELLOW}⚠ Agent wants to:{T.RESET}")
-        print(f"  {T.DIM}{action_description}{T.RESET}")
-        print()
+    def detect(text: str) -> str:
+        """Returns: question, build, file_read, command, or chat"""
+        text_lower = text.lower().strip()
         
-        for key, desc in ApprovalDialog.OPTIONS:
-            print(f"  {T.BCYAN}[{key}]{T.RESET} {desc}")
+        # Check for file read
+        for kw in ActionDetector.FILE_KEYWORDS:
+            if kw in text_lower:
+                # Check if there's a filename mentioned
+                words = text_lower.split()
+                for w in words:
+                    if '.' in w and len(w) > 3:
+                        return "file_read"
+                if any(p in text_lower for p in ['read ', 'show ', 'cat ', 'open ']):
+                    return "file_read"
         
-        print()
-        T.hide_cursor()
-        try:
-            while True:
-                sys.stdout.write(f"  {T.BWHITE}?{T.RESET} Your choice: ")
-                T.flush()
-                
-                fd = sys.stdin.fileno()
-                old = termios.tcgetattr(fd)
-                try:
-                    tty.setraw(fd)
-                    ch = sys.stdin.read(1).lower()
-                finally:
-                    termios.tcsetattr(fd, termios.TCSADRAIN, old)
-                
-                T.show_cursor()
-                print(ch)
-                
-                valid = [o[0] for o in ApprovalDialog.OPTIONS]
-                if ch in valid:
-                    return ch
-                elif ch == '\x03':
-                    return "d"
-                else:
-                    T.hide_cursor()
-                    print(f"  {T.DIM}Invalid. Press y/p/s/d/e{T.RESET}")
-        finally:
-            T.show_cursor()
-
-
-# ═══════════════════════════════════════════════════════
-# SPINNER
-# ═══════════════════════════════════════════════════════
-
-class Spinner:
-    FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
-    
-    def __init__(self, message: str = "Working"):
-        self.message = message
-        self._stop = False
-        self._thread = None
-    
-    def start(self):
-        self._stop = False
-        self._thread = threading.Thread(target=self._animate, daemon=True)
-        self._thread.start()
-        return self
-    
-    def _animate(self):
-        for frame in itertools.cycle(self.FRAMES):
-            if self._stop:
-                break
-            sys.stdout.write(f"\r  {T.CYAN}{frame}{T.RESET} {self.message}")
-            T.flush()
-            time.sleep(0.08)
-    
-    def stop(self, success: bool = True, message: str = ""):
-        self._stop = True
-        if self._thread:
-            self._thread.join(timeout=0.5)
-        icon = f"{T.GREEN}✓{T.RESET}" if success else f"{T.RED}✗{T.RESET}"
-        msg = message or self.message
-        T.clear_line()
-        print(f"  {icon} {msg}")
+        # Check for build task
+        for kw in ActionDetector.BUILD_KEYWORDS:
+            if kw in text_lower and len(text_lower.split()) > 2:
+                return "build"
+        
+        # Check for command
+        for kw in ActionDetector.CMD_KEYWORDS:
+            if text_lower.startswith(kw + " ") or text_lower.startswith(kw + " "):
+                return "command"
+        
+        # Check for listing files
+        if text_lower in ['ls', 'dir', 'list files', 'show files', 'what files']:
+            return "command"
+        
+        # Otherwise it's a question/chat
+        return "question"
 
 
 # ═══════════════════════════════════════════════════════
 # CHAT MEMORY
 # ═══════════════════════════════════════════════════════
 
-class ChatMemory:
-    """Persistent chat history across sessions"""
-    
+class Memory:
     def __init__(self, project_dir: str = "."):
-        self.project_dir = Path(project_dir)
-        self.chat_file = self.project_dir / ".swarm-chat.json"
+        self.file = Path(project_dir) / ".swarm-chat.json"
         self.messages = self._load()
     
     def _load(self) -> list:
-        if self.chat_file.exists():
-            try:
-                return json.loads(self.chat_file.read_text())
-            except:
-                return []
+        if self.file.exists():
+            try: return json.loads(self.file.read_text())
+            except: return []
         return []
     
     def save(self):
-        self.chat_file.write_text(json.dumps(self.messages, indent=2, default=str))
+        self.file.write_text(json.dumps(self.messages, indent=2, default=str))
     
     def add(self, role: str, content: str, agent: str = None):
         self.messages.append({
-            "role": role,
-            "content": content,
-            "agent": agent,
-            "timestamp": datetime.now().isoformat(),
+            "role": role, "content": content,
+            "agent": agent, "time": datetime.now().isoformat()
         })
+        if len(self.messages) > 200:
+            self.messages = self.messages[-200:]
         self.save()
     
-    def get_context(self, max_messages: int = 20) -> str:
-        """Get recent chat history as context string"""
-        recent = self.messages[-max_messages:]
-        parts = []
-        for msg in recent:
-            role = msg["role"].upper()
-            agent = f" [{msg['agent']}]" if msg.get("agent") else ""
-            parts.append(f"{role}{agent}: {msg['content'][:500]}")
-        return "\n".join(parts)
+    def context(self, n: int = 15) -> str:
+        recent = self.messages[-n:]
+        return "\n".join([f"{m['role']}: {m['content'][:300]}" for m in recent])
     
     def clear(self):
         self.messages = []
@@ -380,277 +422,259 @@ class ChatMemory:
 
 
 # ═══════════════════════════════════════════════════════
+# SWARM ORCHESTRATOR BRIDGE
+# ═══════════════════════════════════════════════════════
+
+def run_swarm(goal: str, engine: str, cwd: str) -> bool:
+    """Run the orchestrator for a build goal"""
+    cmd = [sys.executable, str(SWARM_ROOT / "orchestrator.py")]
+    if engine != "auto":
+        cmd.extend(["--engine", engine])
+    cmd.append(goal)
+    
+    try:
+        subprocess.run(cmd, cwd=cwd, timeout=600)
+        return True
+    except subprocess.TimeoutExpired:
+        print(f"  {C.t(C.RED, '✗ Timed out')}")
+        return False
+    except KeyboardInterrupt:
+        print(f"\n  {C.t(C.YLW, '⏸ Cancelled')}")
+        return False
+
+
+# ═══════════════════════════════════════════════════════
+# UPDATE CHECKER
+# ═══════════════════════════════════════════════════════
+
+def check_update(current_version: str) -> Optional[str]:
+    """Check GitHub for updates. Returns new version or None."""
+    try:
+        import urllib.request
+        url = 'https://raw.githubusercontent.com/Anasabubakar/agent-swarm/main/package.json'
+        req = urllib.request.Request(url, headers={'User-Agent': 'swarm-cli'})
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            data = json.loads(resp.read())
+            remote = data.get("version", "0.0.0")
+            if remote != current_version:
+                return remote
+    except:
+        pass
+    return None
+
+
+def auto_update() -> bool:
+    """Run git pull to update"""
+    try:
+        result = subprocess.run(
+            ["git", "pull"],
+            cwd=str(SWARM_ROOT),
+            capture_output=True, text=True, timeout=30
+        )
+        return result.returncode == 0
+    except:
+        return False
+
+
+# ═══════════════════════════════════════════════════════
 # SLASH COMMANDS
 # ═══════════════════════════════════════════════════════
 
-class SlashCommands:
-    """Handle /commands"""
+COMMANDS = {
+    "/help": "Show all commands",
+    "/model": "Change AI engine/model",
+    "/model list": "List available models",
+    "/employee": "Choose a specific agent",
+    "/employee list": "List all 245 agents",
+    "/read <file>": "Read a file",
+    "/ls [dir]": "List directory contents",
+    "/find <pattern>": "Find files",
+    "/grep <text>": "Search text in files",
+    "/run <cmd>": "Run a shell command",
+    "/memory": "Show chat history",
+    "/memory clear": "Clear chat history",
+    "/update": "Check for updates",
+    "/permissions": "Show/set permissions",
+    "/workspace": "Show workspace info",
+    "/credits": "Show credits",
+    "/quit": "Exit swarm",
+}
+
+
+def handle_command(cmd: str, cli: 'SwarmCLI') -> bool:
+    cmd = cmd.strip()
     
-    COMMANDS = {
-        "/help": "Show available commands",
-        "/employee": "Choose a specific agent to work with",
-        "/employee list": "List all available agents",
-        "/employee list add": "Add a custom agent",
-        "/model": "Change AI engine/model",
-        "/model list": "List available models",
-        "/memory": "Show chat history",
-        "/memory clear": "Clear chat history",
-        "/workspace": "Show workspace info",
-        "/status": "Show swarm status",
-        "/credits": "Show credits",
-        "/quit": "Exit swarm",
-        "/exit": "Exit swarm",
-    }
-    
-    @staticmethod
-    def handle(command: str, swarm: 'SwarmCLI') -> bool:
-        """
-        Handle a slash command. Returns True if handled, False if unknown.
-        """
-        cmd = command.strip().lower()
-        
-        if cmd == "/help":
-            SlashCommands._show_help()
-            return True
-        
-        elif cmd == "/credits":
-            SlashCommands._show_credits()
-            return True
-        
-        elif cmd.startswith("/employee list add"):
-            SlashCommands._add_employee(swarm)
-            return True
-        
-        elif cmd.startswith("/employee list"):
-            SlashCommands._list_employees(swarm)
-            return True
-        
-        elif cmd.startswith("/employee"):
-            SlashCommands._choose_employee(swarm)
-            return True
-        
-        elif cmd.startswith("/model list"):
-            SlashCommands._list_models(swarm)
-            return True
-        
-        elif cmd.startswith("/model"):
-            SlashCommands._change_model(swarm)
-            return True
-        
-        elif cmd == "/memory":
-            SlashCommands._show_memory(swarm)
-            return True
-        
-        elif cmd == "/memory clear":
-            swarm.memory.clear()
-            print(f"  {T.GREEN}✓{T.RESET} Chat history cleared")
-            return True
-        
-        elif cmd == "/workspace":
-            SlashCommands._show_workspace(swarm)
-            return True
-        
-        elif cmd == "/status":
-            SlashCommands._show_status(swarm)
-            return True
-        
-        elif cmd in ["/quit", "/exit"]:
-            print(f"\n  {T.BCYAN}Goodbye! 🛡️{T.RESET}\n")
-            sys.exit(0)
-        
-        else:
-            print(f"  {T.RED}Unknown command: {command}{T.RESET}")
-            print(f"  {T.DIM}Type /help for available commands{T.RESET}")
-            return True
-    
-    @staticmethod
-    def _show_help():
-        print(f"\n  {T.BOLD}{T.BCYAN}Slash Commands{T.RESET}")
-        print(f"  {T.DIM}{'─' * 40}{T.RESET}")
-        for cmd, desc in SlashCommands.COMMANDS.items():
-            print(f"  {T.BCYAN}{cmd:<25}{T.RESET} {T.DIM}{desc}{T.RESET}")
+    if cmd == "/help":
+        print(f"\n  {C.t(C.B + C.CYN, 'Commands')}")
+        print(f"  {C.t(C.D, '─' * 40)}")
+        for c, d in COMMANDS.items():
+            print(f"  {C.t(C.CYN, c):<25} {C.t(C.D, d)}")
         print()
+        return True
     
-    @staticmethod
-    def _show_credits():
+    if cmd == "/credits":
         print(f"""
-  {T.BOLD}{T.BCYAN}═══════════════════════════════════════{T.RESET}
-  {T.BOLD}🛡️  Agent Swarm{T.RESET}
-  
-  {T.DIM}Created by:{T.RESET} {T.BOLD}Anas Abubakar{T.RESET}
-  {T.DIM}License:{T.RESET}    MIT
-  {T.DIM}Version:{T.RESET}    1.0.0
-  {T.DIM}Repo:{T.RESET}      github.com/Anasabubakar/agent-swarm
-  
-  {T.DIM}Powered by:{T.RESET}
-  • agency-agents (185 agents)
-  • everything-claude-code (147 skills)
-  • superpowers (parallel dispatch)
-  • get-shit-done (meta-prompting)
-  • claude-mem (persistent memory)
-  
-  {T.BOLD}{T.BCYAN}═══════════════════════════════════════{T.RESET}
+  {C.t(C.B + C.CYN, '═══════════════════════════════')}
+  {C.t(C.B, '🛡️  Agent Swarm')}
+  {C.t(C.D, 'Created by:')} {C.t(C.B, 'Anas Abubakar')}
+  {C.t(C.D, 'License:')}    MIT
+  {C.t(C.D, 'Version:')}    1.0.2
+  {C.t(C.D, 'Repo:')}      github.com/Anasabubakar/agent-swarm
+  {C.t(C.B + C.CYN, '═══════════════════════════════')}
 """)
+        return True
     
-    @staticmethod
-    def _list_employees(swarm):
-        installed = detect_installed_engines()
-        config = swarm._load_config()
-        agents = config.get("agents", {})
-        
-        print(f"\n  {T.BOLD}Available Agents ({len(agents)} total){T.RESET}")
-        print(f"  {T.DIM}{'─' * 50}{T.RESET}")
-        
-        categories = {}
-        for name, conf in agents.items():
-            source = conf.get("source", "custom")
-            if source not in categories:
-                categories[source] = []
-            categories[source].append(name)
-        
-        for cat, names in sorted(categories.items()):
-            print(f"\n  {T.BCYAN}{cat.upper()}{T.RESET} ({len(names)})")
-            for name in sorted(names)[:10]:
-                print(f"    {T.DIM}•{T.RESET} {name}")
-            if len(names) > 10:
-                print(f"    {T.DIM}... and {len(names) - 10} more{T.RESET}")
+    if cmd.startswith("/read "):
+        file_path = cmd[6:].strip()
+        content = FileReader.read(file_path)
+        print(f"\n  {C.t(C.BLU, f'📄 {file_path}')}")
+        print(f"  {C.t(C.D, '─' * 40)}")
+        for line in content.split('\n')[:50]:
+            print(f"  {C.t(C.D, '│')} {line}")
         print()
+        return True
     
-    @staticmethod
-    def _choose_employee(swarm):
-        menu = InteractiveMenu(
-            "Choose an agent to work with:",
-            ["frontend-dev", "backend-dev", "devops", "security", "qa-tester", 
-             "project-manager", "tech-lead", "motion-graphics", "ui-ux-scout", "Cancel"],
-            ["React/Next.js UI", "Node.js API", "Docker/CI-CD", "Security audit", 
-             "Testing", "Task breakdown", "Architecture review", "Animations",
-             "Design inspiration", "Go back"]
-        )
-        idx = menu.show()
-        if idx >= 0 and idx < len(menu.options) - 1:
-            agent = menu.options[idx]
-            swarm.active_agent = agent
-            print(f"  {T.GREEN}✓{T.RESET} Active agent: {T.BOLD}{agent}{T.RESET}")
+    if cmd.startswith("/ls"):
+        dir_path = cmd[4:].strip() or "."
+        print(f"\n{FileReader.list_directory(dir_path)}\n")
+        return True
+    
+    if cmd.startswith("/find "):
+        pattern = cmd[6:].strip()
+        print(f"\n{FileReader.find(pattern)}\n")
+        return True
+    
+    if cmd.startswith("/grep "):
+        query = cmd[6:].strip()
+        print(f"\n{FileReader.search_text(query)}\n")
+        return True
+    
+    if cmd.startswith("/run "):
+        command = cmd[5:].strip()
+        result = cli.runner.run(command)
+        if result["output"]:
+            print(f"\n{result['output']}")
+        if result["error"]:
+            print(f"  {C.t(C.RED, result['error'])}")
         print()
+        return True
     
-    @staticmethod
-    def _change_model(swarm):
-        installed = detect_installed_engines()
-        if not installed:
-            print(f"  {T.RED}No engines installed{T.RESET}")
-            return
-        
-        menu = InteractiveMenu(
-            "Choose an engine:",
-            installed + ["auto", "Cancel"],
-            [ENGINES.get(e, {}).get("description", "") for e in installed] + ["Auto-detect", "Go back"]
-        )
-        idx = menu.show()
-        if idx >= 0 and idx < len(menu.options) - 1:
-            engine = menu.options[idx]
-            
-            # If specific engine, also choose model
-            if engine != "auto" and engine in ENGINES:
-                models = ENGINES[engine].get("models", [])
-                if models:
-                    model_menu = InteractiveMenu(
-                        f"Choose a model for {engine}:",
-                        models + ["Cancel"],
-                    )
-                    midx = model_menu.show()
-                    if midx >= 0 and midx < len(models):
-                        swarm.engine = engine
-                        swarm.model = models[midx]
-                        print(f"  {T.GREEN}✓{T.RESET} Engine: {T.BOLD}{engine}{T.RESET} | Model: {T.BOLD}{swarm.model}{T.RESET}")
-                        return
-            
-            swarm.engine = engine
-            print(f"  {T.GREEN}✓{T.RESET} Engine: {T.BOLD}{engine}{T.RESET}")
+    if cmd == "/model":
+        installed = detect_engines()
+        options = ["auto"] + installed
+        print(f"\n  {C.t(C.B, 'Select engine:')}")
+        for i, opt in enumerate(options):
+            marker = "▸" if opt == cli.engine else " "
+            print(f"  {C.t(C.GRN, marker)} {opt}")
+        print(f"\n  {C.t(C.D, 'Type: /model <name> to switch')}")
         print()
+        return True
     
-    @staticmethod
-    def _list_models(swarm):
-        print(f"\n  {T.BOLD}Available Models by Engine{T.RESET}")
-        print(f"  {T.DIM}{'─' * 50}{T.RESET}")
-        for eng_key, eng in ENGINES.items():
-            if eng_key == "auto":
-                continue
-            models = eng.get("models", [])
-            if models:
-                print(f"\n  {T.BCYAN}{eng['name']}{T.RESET}")
-                for m in models:
-                    print(f"    {T.DIM}•{T.RESET} {m}")
+    if cmd.startswith("/model "):
+        engine = cmd[7:].strip()
+        if engine in ENGINES or engine == "auto":
+            cli.engine = engine
+            print(f"  {C.t(C.GRN, '✓')} Engine: {C.t(C.B, engine)}\n")
+        else:
+            print(f"  {C.t(C.RED, f'Unknown engine: {engine}')}\n")
+        return True
+    
+    if cmd.startswith("/employee list"):
+        config = cli._load_config()
+        agents = list(config.get("agents", {}).keys())
+        print(f"\n  {C.t(C.B, f'Agents ({len(agents)} total)')}")
+        print(f"  {C.t(C.D, '─' * 40)}")
+        for a in sorted(agents)[:30]:
+            print(f"    {C.t(C.D, '•')} {a}")
+        if len(agents) > 30:
+            print(f"    {C.t(C.D, f'... and {len(agents)-30} more')}")
         print()
+        return True
     
-    @staticmethod
-    def _show_memory(swarm):
-        msgs = swarm.memory.messages
+    if cmd.startswith("/employee"):
+        print(f"  {C.t(C.D, 'Usage: /employee list | /employee list add')}\n")
+        return True
+    
+    if cmd == "/memory":
+        msgs = cli.memory.messages
         if not msgs:
-            print(f"  {T.DIM}No chat history yet{T.RESET}")
-            return
-        
-        print(f"\n  {T.BOLD}Chat History ({len(msgs)} messages){T.RESET}")
-        print(f"  {T.DIM}{'─' * 50}{T.RESET}")
-        for msg in msgs[-10:]:
-            role = msg["role"]
-            icon = "▸" if role == "user" else "◂"
-            color = T.BWHITE if role == "user" else T.BCYAN
-            print(f"  {color}{icon}{T.RESET} {msg['content'][:80]}")
+            print(f"  {C.t(C.D, 'No chat history yet')}\n")
+            return True
+        print(f"\n  {C.t(C.B, f'Chat History ({len(msgs)} messages)')}")
+        print(f"  {C.t(C.D, '─' * 40)}")
+        for m in msgs[-10:]:
+            icon = "▸" if m["role"] == "user" else "◂"
+            color = C.WHT if m["role"] == "user" else C.CYN
+            print(f"  {C.t(color, icon)} {m['content'][:70]}")
         print()
+        return True
     
-    @staticmethod
-    def _show_workspace(swarm):
-        print(f"\n  {T.BOLD}Workspace{T.RESET}")
-        print(f"  {T.DIM}{'─' * 40}{T.RESET}")
-        print(f"  {T.DIM}Directory:{T.RESET} {os.getcwd()}")
-        print(f"  {T.DIM}Engine:{T.RESET}    {swarm.engine}")
-        print(f"  {T.DIM}Model:{T.RESET}     {swarm.model or 'auto'}")
-        print(f"  {T.DIM}Agent:{T.RESET}     {swarm.active_agent or 'auto (via orchestrator)'}")
-        print(f"  {T.DIM}Messages:{T.RESET}  {len(swarm.memory.messages)}")
+    if cmd == "/memory clear":
+        cli.memory.clear()
+        print(f"  {C.t(C.GRN, '✓')} Chat history cleared\n")
+        return True
+    
+    if cmd == "/permissions":
+        perms = cli.permissions.always_allow
+        print(f"\n  {C.t(C.B, 'Always Allowed:')}")
+        if perms:
+            for p in perms:
+                print(f"    {C.t(C.GRN, '✓')} {p}")
+        else:
+            print(f"    {C.t(C.D, 'None set yet')}")
+        print(f"\n  {C.t(C.D, 'Permissions are saved per-project in .swarm-permissions.json')}")
         print()
+        return True
     
-    @staticmethod
-    def _show_status(swarm):
-        installed = detect_installed_engines()
-        print(f"\n  {T.BOLD}Swarm Status{T.RESET}")
-        print(f"  {T.DIM}{'─' * 40}{T.RESET}")
-        print(f"  {T.GREEN}✓{T.RESET} Engines: {', '.join(installed) if installed else 'none'}")
-        
-        # Count agents
-        config = swarm._load_config()
-        agent_count = len(config.get("agents", {}))
-        print(f"  {T.GREEN}✓{T.RESET} Agents: {agent_count}")
-        print(f"  {T.GREEN}✓{T.RESET} Skills: 239")
-        print(f"  {T.GREEN}✓{T.RESET} Commands: 125")
-        print(f"  {T.GREEN}✓{T.RESET} Rules: 77")
+    if cmd == "/workspace":
+        print(f"\n  {C.t(C.B, 'Workspace')}")
+        print(f"  {C.t(C.D, '─' * 40)}")
+        print(f"  {C.t(C.D, 'Directory:')} {os.getcwd()}")
+        print(f"  {C.t(C.D, 'Engine:')}    {cli.engine}")
+        print(f"  {C.t(C.D, 'Messages:')}  {len(cli.memory.messages)}")
         print()
+        return True
     
-    @staticmethod
-    def _add_employee(swarm):
-        print(f"\n  {T.BYELLOW}Create a custom agent{T.RESET}")
-        print(f"  {T.DIM}Enter the agent definition (markdown format){T.RESET}")
-        print(f"  {T.DIM}Type 'DONE' on a new line when finished{T.RESET}\n")
-        
-        lines = []
-        while True:
+    if cmd == "/update":
+        new_ver = check_update(cli.version)
+        if new_ver:
+            print(f"\n  {C.t(C.YLW, f'⚠ Update available: v{cli.version} → v{new_ver}')}")
+            print(f"  {C.t(C.CYN, '[a]')} Auto-update now")
+            print(f"  {C.t(C.CYN, '[m]')} Manual (cd ~/.swarm && git pull)")
+            print(f"  {C.t(C.CYN, '[s]')} Skip for now")
+            print()
+            
+            fd = sys.stdin.fileno()
+            old = termios.tcgetattr(fd)
             try:
-                line = input(f"  {T.CYAN}>{T.RESET} ")
-                if line.strip().upper() == "DONE":
-                    break
-                lines.append(line)
-            except (EOFError, KeyboardInterrupt):
-                break
-        
-        if lines:
-            name = lines[0].replace("#", "").strip().lower().replace(" ", "-")
-            content = "\n".join(lines)
+                tty.setraw(fd)
+                sys.stdout.write(f"  {C.t(C.WHT, '?')} ")
+                sys.stdout.flush()
+                ch = sys.stdin.read(1).lower()
+                print(ch)
+            finally:
+                termios.tcsetattr(fd, termios.TCSADRAIN, old)
             
-            agent_file = AGENTS_DIR / "custom" / f"{name}.md"
-            agent_file.parent.mkdir(parents=True, exist_ok=True)
-            agent_file.write_text(content)
-            
-            print(f"\n  {T.GREEN}✓{T.RESET} Agent '{name}' saved to {agent_file}")
-        print()
+            if ch == 'a':
+                print(f"\n  {C.t(C.CYN, '⠋')} Updating...")
+                if auto_update():
+                    print(f"  {C.t(C.GRN, '✓')} Updated! Restart swarm to use new version.\n")
+                else:
+                    print(f"  {C.t(C.RED, '✗')} Update failed. Try manually: cd ~/.swarm && git pull\n")
+            elif ch == 'm':
+                print(f"  {C.t(C.D, 'Run: cd ~/.swarm && git pull')}\n")
+            else:
+                print(f"  {C.t(C.D, 'Skipped')}\n")
+        else:
+            print(f"  {C.t(C.GRN, '✓')} You're on the latest version (v{cli.version})\n")
+        return True
+    
+    if cmd in ["/quit", "/exit"]:
+        print(f"\n  {C.t(C.CYN, 'Goodbye! 🛡️')}\n")
+        sys.exit(0)
+    
+    print(f"  {C.t(C.RED, f'Unknown: {cmd}')}  Type /help\n")
+    return True
 
 
 # ═══════════════════════════════════════════════════════
@@ -658,229 +682,153 @@ class SlashCommands:
 # ═══════════════════════════════════════════════════════
 
 class SwarmCLI:
-    """The main interactive swarm CLI"""
-    
     def __init__(self):
+        self.version = "1.0.2"
         self.engine = "auto"
-        self.model = None
-        self.active_agent = None
         self.project_dir = os.getcwd()
-        self.memory = ChatMemory(self.project_dir)
-        self.denied_actions = set()  # Actions denied with "don't ask again"
+        self.memory = Memory(self.project_dir)
+        self.permissions = PermissionManager(self.project_dir)
+        self.runner = CommandRunner(self.permissions, self.project_dir)
+        self.file_reader = FileReader()
     
     def _load_config(self) -> dict:
         if CONFIG_FILE.exists():
-            return json.loads(CONFIG_FILE.read_text())
+            try: return json.loads(CONFIG_FILE.read_text())
+            except: return {}
         return {"agents": {}}
     
     def banner(self):
         print(f"""
-{T.BCYAN}{T.BOLD}  ╔═══════════════════════════════════════════════╗
-  ║                                               ║
-  ║   ███████╗██╗    ██╗ █████╗ ██████╗ ███╗   ███╗  ║
-  ║   ██╔════╝██║    ██║██╔══██╗██╔══██╗████╗ ████║  ║
-  ║   ███████╗██║ █╗ ██║███████║██████╔╝██╔████╔██║  ║
-  ║   ╚════██║██║███╗██║██╔══██║██╔══██╗██║╚██╔╝██║  ║
-  ║   ███████║╚███╔███╔╝██║  ██║██║  ██║██║ ╚═╝ ██║  ║
-  ║   ╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝  ║
-  ║                                               ║
-  ║{T.BWHITE}   Interactive Agent Swarm CLI                 {T.BCYAN}║
-  ║{T.DIM}   by Anas Abubakar • v1.0.0                   {T.BCYAN}║
-  ╚═══════════════════════════════════════════════╝{T.RESET}""")
+{C.t(C.B + C.CYN, '  ╔═══════════════════════════════════════╗')}
+{C.t(C.B + C.CYN, '  ║                                       ║')}
+{C.t(C.B + C.CYN, '  ║  ███████╗██╗    ██╗ █████╗ ██████╗    ║')}
+{C.t(C.B + C.CYN, '  ║  ██╔════╝██║    ██║██╔══██╗██╔══██╗   ║')}
+{C.t(C.B + C.CYN, '  ║  ███████╗██║ █╗ ██║███████║██████╔╝   ║')}
+{C.t(C.B + C.CYN, '  ║  ╚════██║██║███╗██║██╔══██║██╔══██╗   ║')}
+{C.t(C.B + C.CYN, '  ║  ███████║╚███╔███╔╝██║  ██║██║  ██║   ║')}
+{C.t(C.B + C.CYN, '  ║  ╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝   ║')}
+{C.t(C.B + C.CYN, '  ║                                       ║')}
+{C.t(C.B + C.CYN, f'  ║  {C.t(C.WHT, f"v{self.version} by Anas Abubakar")}{C.t(C.B + C.CYN, "          ║")}')}
+{C.t(C.B + C.CYN, '  ╚═══════════════════════════════════════╝')}
+""")
     
-    def select_model(self):
-        """Interactive model selection on startup"""
-        installed = detect_installed_engines()
+    def run(self):
+        # Check for updates
+        new_ver = check_update(self.version)
+        if new_ver:
+            print(f"  {C.t(C.YLW, f'⚠ Update available: v{self.version} → v{new_ver}')}")
+            print(f"  {C.t(C.D, 'Type /update to upgrade')}")
+            print()
         
-        if not installed:
-            print(f"  {T.RED}No AI engines found!{T.RESET}")
-            print(f"  {T.DIM}Install one of: kilo, claude, gemini, codex, aider{T.RESET}\n")
-            self.engine = "auto"
-            return
+        self.banner()
         
+        # Select engine
+        installed = detect_engines()
         if len(installed) == 1:
             self.engine = installed[0]
-            print(f"  {T.GREEN}✓{T.RESET} Using: {T.BOLD}{installed[0]}{T.RESET} (only engine found)\n")
-            return
-        
-        # Multiple engines — let user choose
-        options = ["auto"] + installed
-        descriptions = ["Detect best available"] + [
-            f"{ENGINES.get(e, {}).get('name', e)} ({e})" for e in installed
-        ]
-        
-        menu = InteractiveMenu("Select your engine:", options, descriptions)
-        idx = menu.show()
-        
-        if idx < 0:
-            self.engine = "auto"
-        else:
-            self.engine = options[idx]
-        
-        print(f"  {T.GREEN}✓{T.RESET} Engine: {T.BOLD}{self.engine}{T.RESET}\n")
-    
-    def is_simple_question(self, text: str) -> bool:
-        """Detect if input is a simple question, not a build goal"""
-        text_lower = text.lower().strip()
-        
-        simple_patterns = [
-            "what can you do", "what are you", "who are you",
-            "hello", "hi", "hey", "sup", "what's up",
-            "how do you work", "how does this work",
-            "help", "what is this", "explain",
-            "how many agents", "how many skills",
-            "tell me about", "what's your name",
-            "thanks", "thank you", "ok", "okay", "cool",
-            "nice", "great", "awesome", "lol", "haha",
-        ]
-        
-        for pattern in simple_patterns:
-            if pattern in text_lower:
-                return True
-        
-        # Very short messages are likely chat, not goals
-        if len(text_lower.split()) <= 3 and "?" in text:
-            return True
-        
-        return False
-    
-    def answer_simple(self, text: str):
-        """Answer simple questions without running orchestrator"""
-        text_lower = text.lower().strip()
-        
-        responses = {
-            "what can you do": f"""I'm {T.BOLD}Swarm{T.RESET} — an AI agent orchestrator. I coordinate specialist AI agents to build things for you.
-
-{T.BCYAN}What I can do:{T.RESET}
-  {T.GREEN}•{T.RESET} Build websites, apps, APIs
-  {T.GREEN}•{T.RESET} Create frontend, backend, full-stack projects
-  {T.GREEN}•{T.RESET} Set up DevOps, CI/CD, deployment
-  {T.GREEN}•{T.RESET} Security audits, testing, QA
-  {T.GREEN}•{T.RESET} Motion graphics, animations
-  {T.GREEN}•{T.RESET} UI/UX design research
-  {T.GREEN}•{T.RESET} And 245+ specialized agents
-
-{T.BCYAN}How to use:{T.RESET}
-  Just tell me what you want to build: {T.DIM}"Build a landing page"{T.RESET}
-
-{T.BCYAN}Commands:{T.RESET}
-  Type {T.BCYAN}/help{T.RESET} for all slash commands
-  Type {T.BCYAN}/employee list{T.RESET} to see all agents""",
-            
-            "who are you": "I'm 🛡️ Swarm — built by Anas Abubakar. I coordinate 245 AI agents to build things for you.",
-            "what is this": "This is Agent Swarm — an engine-agnostic multi-agent orchestration CLI. Type a goal to get started!",
-            "how many agents": f"I have {T.BOLD}245 agents{T.RESET} across engineering, design, testing, marketing, and more. Type /employee list to browse them.",
-        }
-        
-        for key, response in responses.items():
-            if key in text_lower:
-                print(f"\n  {response}\n")
-                self.memory.add("user", text)
-                self.memory.add("assistant", response)
-                return
-        
-        # Generic response
-        print(f"\n  I'm here to build things for you! Try giving me a goal like:")
-        print(f"  {T.CYAN}\"Build a landing page for TeenovateX\"{T.RESET}")
-        print(f"  {T.CYAN}\"Create a React todo app\"{T.RESET}")
-        print(f"  {T.CYAN}\"Set up a REST API with Node.js\"{T.RESET}\n")
-        self.memory.add("user", text)
-        self.memory.add("assistant", "Suggested user give a build goal")
-    
-    def run_goal(self, goal: str):
-        """Run the orchestrator for a goal"""
-        import shutil
-        
-        # Build orchestrator command
-        cmd = [sys.executable, str(SWARM_ROOT / "orchestrator.py")]
-        
-        if self.engine != "auto":
-            cmd.extend(["--engine", self.engine])
-        
-        if self.active_agent:
-            cmd.extend(["--agent", self.active_agent])
-        
-        # Add chat context
-        context = self.memory.get_context()
-        if context:
-            goal_with_context = f"{goal}\n\n[Previous conversation context:\n{context[-1000:]}]"
-        else:
-            goal_with_context = goal
-        
-        cmd.append(goal_with_context)
-        
-        # Save to memory
-        self.memory.add("user", goal)
-        
-        # Run
+            print(f"  {C.t(C.GRN, '✓')} Engine: {C.t(C.B, installed[0])}")
+        elif len(installed) > 1:
+            print(f"  {C.t(C.B, 'Available engines:')} {', '.join(installed)}")
+            print(f"  {C.t(C.D, 'Type /model to change')}")
         print()
-        try:
-            result = subprocess.run(cmd, cwd=self.project_dir, timeout=600)
-            self.memory.add("assistant", f"Completed: {goal}", agent=self.active_agent or "orchestrator")
-        except subprocess.TimeoutExpired:
-            print(f"\n  {T.RED}✗{T.RESET} Timed out after 10 minutes")
-            self.memory.add("assistant", f"Timed out: {goal}")
-        except KeyboardInterrupt:
-            print(f"\n  {T.YELLOW}⏸{T.RESET} Cancelled")
-            self.memory.add("assistant", f"Cancelled: {goal}")
-        except Exception as e:
-            print(f"\n  {T.RED}✗{T.RESET} Error: {str(e)[:80]}")
-        print()
-    
-    def chat_loop(self):
-        """Main interactive chat loop"""
-        self.banner()
-        self.select_model()
         
-        print(f"  {T.DIM}Type your goal, or /help for commands. ESC or /quit to exit.{T.RESET}\n")
+        print(f"  {C.t(C.D, 'Ask me anything. Type /help for commands.')}")
+        print(f"  {C.t(C.D, 'I can answer questions, read files, run commands, and build projects.')}\n")
         
+        # Main loop
         while True:
             try:
-                # Prompt
-                engine_display = f"{T.DIM}[{self.engine}]{T.RESET} " if self.engine != "auto" else ""
-                agent_display = f"{T.DIM}({self.active_agent}){T.RESET} " if self.active_agent else ""
-                
-                sys.stdout.write(f"  {T.BGREEN}▸{T.RESET} {engine_display}{agent_display}")
-                T.flush()
+                eng = f"{C.t(C.D, f'[{self.engine}]')} " if self.engine != "auto" else ""
+                sys.stdout.write(f"  {C.t(C.GRN, '▸')} {eng}")
+                sys.stdout.flush()
                 
                 user_input = input().strip()
-                
                 if not user_input:
                     continue
                 
-                # Handle slash commands
+                # Slash commands
                 if user_input.startswith("/"):
-                    SlashCommands.handle(user_input, self)
+                    handle_command(user_input, self)
                     continue
                 
-                # Handle exit
+                # Exit
                 if user_input.lower() in ["quit", "exit", "q"]:
-                    print(f"\n  {T.BCYAN}Goodbye! 🛡️{T.RESET}\n")
+                    print(f"\n  {C.t(C.CYN, 'Goodbye! 🛡️')}\n")
                     break
                 
-                # Simple questions — answer directly, don't run orchestrator
-                if self.is_simple_question(user_input):
-                    self.answer_simple(user_input)
-                    continue
+                # Detect action type
+                action = ActionDetector.detect(user_input)
+                self.memory.add("user", user_input)
                 
-                # Run goal
-                self.run_goal(user_input)
+                if action == "question" or action == "chat":
+                    # These should go through the engine for real AI responses
+                    # For now, suggest using the engine
+                    print(f"\n  {C.t(C.BLU, '💡')} I'd answer this using {self.engine}.")
+                    print(f"  {C.t(C.D, 'This connects to the AI engine for real responses.')}")
+                    print(f"  {C.t(C.D, 'Try: /model to switch engines, or give me a build task.')}\n")
+                    self.memory.add("assistant", "Suggested using engine for question answering")
+                
+                elif action == "file_read":
+                    # Extract filename from input
+                    words = user_input.split()
+                    filename = None
+                    for w in words:
+                        if '.' in w and len(w) > 2:
+                            filename = w
+                            break
+                        elif w in ['read', 'show', 'cat', 'open', 'view']:
+                            idx = words.index(w)
+                            if idx + 1 < len(words):
+                                filename = words[idx + 1]
+                                break
+                    
+                    if filename:
+                        content = FileReader.read(filename)
+                        print(f"\n  {C.t(C.BLU, f'📄 {filename}')}")
+                        print(f"  {C.t(C.D, '─' * 40)}")
+                        for line in content.split('\n')[:30]:
+                            print(f"  {C.t(C.D, '│')} {line}")
+                        print()
+                        self.memory.add("assistant", f"Read file: {filename}")
+                    else:
+                        print(f"  {C.t(C.YLW, 'Which file?')} Try: /read <filename>\n")
+                
+                elif action == "command":
+                    # Extract and run command
+                    cmd = user_input
+                    if cmd.lower().startswith("run "):
+                        cmd = cmd[4:].strip()
+                    elif cmd.lower() in ["ls", "dir"]:
+                        cmd = "ls -la"
+                    
+                    print()
+                    result = self.runner.run(cmd)
+                    if result["output"]:
+                        for line in result["output"].split('\n')[:20]:
+                            print(f"  {line}")
+                    if result["error"]:
+                        print(f"  {C.t(C.RED, result['error'][:200])}")
+                    print()
+                    self.memory.add("assistant", f"Ran: {cmd}")
+                
+                elif action == "build":
+                    # Run the swarm orchestrator
+                    print()
+                    success = run_swarm(user_input, self.engine, self.project_dir)
+                    self.memory.add("assistant", f"Built: {user_input}" if success else f"Failed: {user_input}")
+                    print()
                 
             except KeyboardInterrupt:
                 print(f"\n")
-                continue  # Don't exit on CTRL+C, just cancel current operation
+                continue
             except EOFError:
                 print()
                 break
 
 
-# ═══════════════════════════════════════════════════════
-# ENTRY POINT
-# ═══════════════════════════════════════════════════════
-
 def main():
     cli = SwarmCLI()
-    cli.chat_loop()
+    cli.run()
 
 
 if __name__ == "__main__":
