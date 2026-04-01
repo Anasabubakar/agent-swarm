@@ -166,14 +166,15 @@ def dispatch_parallel(tasks: list, config: dict = None) -> list:
     return results
 
 
-def orchestrate(goal: str, engine: str = None, project_dir: str = ".") -> dict:
+def orchestrate(goal: str, engine: str = None, project_dir: str = ".", interactive: bool = False) -> dict:
     """
-    Main orchestration flow:
-    1. PM breaks goal into tasks
-    2. Orchestrator dispatches tasks to agents
-    3. Agents work in parallel
-    4. Tech Lead reviews
-    5. Report compiled
+    Main orchestration workflow:
+    
+    1. QUESTIONNAIRE — Clarify requirements before building
+    2. PLANNER — Design the implementation plan
+    3. EXECUTE — Dispatch agents to implement
+    4. DEBUG — Fix any issues found
+    5. SHIP — Final review and deliver
     """
     config = load_config()
     
@@ -181,58 +182,134 @@ def orchestrate(goal: str, engine: str = None, project_dir: str = ".") -> dict:
     print(f"🔧 ENGINE: {engine or config.get('default_engine', 'claude')}")
     print("=" * 60)
     
-    # Step 1: PM breaks down the goal
-    print("\n📋 Step 1: Project Manager breaking down the goal...")
-    pm_result = dispatch_agent(
-        "project-manager",
-        f"Break down this goal into atomic tasks:\n\n{goal}\n\nProject directory: {project_dir}",
-        context=f"You are managing a project at {project_dir}",
+    # ═══════════════════════════════════════════════════════
+    # PHASE 1: QUESTIONNAIRE — Ask before you build
+    # ═══════════════════════════════════════════════════════
+    print("\n❓ Phase 1: QUESTIONNAIRE — Clarifying requirements...")
+    questions_result = dispatch_agent(
+        "questionnaire",
+        f"Analyze this goal and produce clarifying questions:\n\n{goal}\n\nProject directory: {project_dir}",
+        context=f"Project at {project_dir}. Be thorough about scope, users, data, auth, edge cases.",
         engine_name=engine,
         config=config
     )
     
-    if pm_result["status"] != "✅ SUCCESS":
-        return {"error": "PM failed", "details": pm_result}
+    if questions_result["status"] != "✅ SUCCESS":
+        # If questionnaire fails, proceed with assumptions
+        print("⚠️  Questionnaire failed — proceeding with assumptions")
+        clarified_requirements = f"Goal: {goal}\n(No clarifications — building based on goal alone)"
+    else:
+        clarified_requirements = questions_result["output"]
+        print(f"\n📋 Questions:\n{clarified_requirements[:500]}...")
+        
+        if interactive:
+            print("\n⏸️  Answer the questions above, then press Enter to continue...")
+            input()
+            # In a real interactive mode, we'd collect answers here
     
-    print(f"\n📝 PM Plan:\n{pm_result['output'][:500]}...")
+    # ═══════════════════════════════════════════════════════
+    # PHASE 2: PLANNER — Design the implementation
+    # ═══════════════════════════════════════════════════════
+    print("\n📐 Phase 2: PLANNER — Designing implementation plan...")
+    plan_result = dispatch_agent(
+        "planner",
+        f"Design a complete implementation plan for:\n\nGOAL:\n{goal}\n\nCLARIFIED REQUIREMENTS:\n{clarified_requirements}\n\nProject directory: {project_dir}",
+        context="Design architecture, file structure, ordered tasks with dependencies. Be specific.",
+        engine_name=engine,
+        config=config
+    )
     
-    # Step 2: Parse tasks
-    tasks = parse_tasks(pm_result["output"], goal, engine)
+    if plan_result["status"] != "✅ SUCCESS":
+        return {"error": "Planner failed", "details": plan_result}
     
-    # Step 3: Dispatch agents
-    print(f"\n🚀 Step 2: Dispatching {len(tasks)} agents...")
+    print(f"\n📝 Plan:\n{plan_result['output'][:500]}...")
+    
+    # ═══════════════════════════════════════════════════════
+    # PHASE 3: EXECUTE — Dispatch specialist agents
+    # ═══════════════════════════════════════════════════════
+    print("\n🚀 Phase 3: EXECUTE — Dispatching specialist agents...")
+    tasks = parse_tasks(plan_result["output"], goal, engine)
     results = dispatch_parallel(tasks, config)
     
-    # Step 4: Tech Lead reviews
-    print("\n🔍 Step 3: Tech Lead reviewing outputs...")
+    # ═══════════════════════════════════════════════════════
+    # PHASE 4: DEBUG — Fix any issues
+    # ═══════════════════════════════════════════════════════
+    failed_agents = [r for r in results if r.get("status") != "✅ SUCCESS"]
+    if failed_agents:
+        print(f"\n🐛 Phase 4: DEBUG — {len(failed_agents)} agent(s) need debugging...")
+        
+        for failed in failed_agents:
+            debug_result = dispatch_agent(
+                "debugger",
+                f"Debug this failed agent output:\n\nAgent: {failed['agent']}\nError: {failed.get('error', 'Unknown')}\n\nOriginal task context:\n{plan_result['output'][:1000]}",
+                context=f"Find root cause and fix. Original goal: {goal}",
+                engine_name=engine,
+                config=config
+            )
+            if debug_result["status"] == "✅ SUCCESS":
+                # Replace failed result with debugged version
+                for i, r in enumerate(results):
+                    if r["agent"] == failed["agent"]:
+                        results[i] = {
+                            "agent": failed["agent"],
+                            "engine": engine,
+                            "status": "✅ DEBUGGED",
+                            "output": debug_result["output"],
+                            "original_error": failed.get("error", ""),
+                            "debug_notes": debug_result["output"][:200]
+                        }
+    else:
+        print("\n✅ Phase 4: DEBUG — No failures detected!")
+    
+    # ═══════════════════════════════════════════════════════
+    # PHASE 5: SHIP — Final review
+    # ═══════════════════════════════════════════════════════
+    print("\n🔍 Phase 5: SHIP — Tech Lead final review...")
     review_context = "\n\n".join([
-        f"## {r['agent']} Output\n{r.get('output', '')[:500]}"
-        for r in results if r.get("output")
+        f"## {r['agent']} ({r.get('status', '?')})\n{r.get('output', '')[:500]}"
+        for r in results
     ])
     
     review_result = dispatch_agent(
         "tech-lead",
-        f"Review these agent outputs for consistency and quality:\n\n{review_context}",
-        context=goal,
+        f"Final review of all agent outputs for consistency, quality, and completeness:\n\n{review_context}",
+        context=f"Goal: {goal}. Check for conflicts, missing pieces, quality issues.",
         engine_name=engine,
         config=config
     )
     
-    # Step 5: Report
+    # ═══════════════════════════════════════════════════════
+    # COMPILE FINAL REPORT
+    # ═══════════════════════════════════════════════════════
     report = {
         "goal": goal,
         "engine": engine or config.get("default_engine"),
         "timestamp": datetime.now().isoformat(),
-        "pm_plan": pm_result["output"],
-        "agent_results": results,
-        "tech_lead_review": review_result.get("output", ""),
-        "status": "COMPLETED"
+        "workflow": {
+            "questionnaire": questions_result.get("output", ""),
+            "plan": plan_result.get("output", ""),
+            "execution": results,
+            "debug": [r for r in results if "DEBUG" in r.get("status", "")],
+            "review": review_result.get("output", ""),
+        },
+        "status": "COMPLETED",
+        "agents_used": len(tasks),
+        "agents_succeeded": len([r for r in results if "SUCCESS" in r.get("status", "")]),
+        "agents_failed": len([r for r in results if "FAILED" in r.get("status", "")]),
+        "agents_debugged": len([r for r in results if "DEBUG" in r.get("status", "")]),
     }
     
     report_file = OUTPUT_DIR / f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     report_file.write_text(json.dumps(report, indent=2, default=str))
     
-    print(f"\n✅ Orchestration complete! Report: {report_file}")
+    print(f"\n{'=' * 60}")
+    print(f"✅ COMPLETE! Agents: {report['agents_used']} | "
+          f"✅ {report['agents_succeeded']} | "
+          f"❌ {report['agents_failed']} | "
+          f"🐛 {report['agents_debugged']}")
+    print(f"📄 Report: {report_file}")
+    print(f"{'=' * 60}")
+    
     return report
 
 
@@ -313,6 +390,7 @@ Examples:
     parser.add_argument("--system-flag", default="--prompt", help="System prompt flag for generic engine")
     parser.add_argument("--auto-flag", default="", help="Auto/yes flag for generic engine")
     parser.add_argument("--project", default=".", help="Project directory")
+    parser.add_argument("--interactive", "-i", action="store_true", help="Interactive mode — pause for human input between phases")
     parser.add_argument("--list-engines", action="store_true", help="List available engines")
     parser.add_argument("--list-agents", action="store_true", help="List available agents")
     parser.add_argument("--register-engine", nargs=3, metavar=("NAME", "COMMAND", "FLAG"),
@@ -370,7 +448,7 @@ Examples:
     
     # Full orchestration
     if args.goal:
-        report = orchestrate(args.goal, engine=args.engine, project_dir=args.project)
+        report = orchestrate(args.goal, engine=args.engine, project_dir=args.project, interactive=args.interactive)
         return
     
     # No args — show help
