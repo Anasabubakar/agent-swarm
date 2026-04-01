@@ -31,6 +31,7 @@ from engines.adapter import (
 from core.workspace import Workspace, WorkspaceManager
 from core.command_executor import CommandExecutor, CommandSafety
 from core.self_healer import SelfHealer, HealingStrategy
+from core.tui import TUI, Spinner, Colors as C
 
 # Paths
 SWARM_ROOT = Path(__file__).parent
@@ -194,20 +195,22 @@ def orchestrate(goal: str, engine: str = None, project_dir: str = ".", interacti
     config = load_config()
     
     # ═══════════════════════════════════════════════════════
-    # CREATE WORKSPACE — isolated project directory
+    # CREATE WORKSPACE — in current directory, not in swarm folder
     # ═══════════════════════════════════════════════════════
-    ws_manager = WorkspaceManager(project_dir if project_dir != "." else None)
+    ws_manager = WorkspaceManager(project_dir)
     workspace = ws_manager.create_workspace(goal)
     
-    print(f"\n🎯 GOAL: {goal}")
-    print(f"📁 WORKSPACE: {workspace.get_path()}")
-    print(f"🔧 ENGINE: {engine or config.get('default_engine', 'claude')}")
-    print("=" * 60)
+    # ═══════════════════════════════════════════════════════
+    # DISPLAY
+    # ═══════════════════════════════════════════════════════
+    TUI.mini_banner()
+    TUI.goal(goal, str(workspace.get_path()), engine or config.get('default_engine', 'claude'))
     
     # ═══════════════════════════════════════════════════════
     # PHASE 1: QUESTIONNAIRE — Ask before you build
     # ═══════════════════════════════════════════════════════
-    print("\n❓ Phase 1: QUESTIONNAIRE — Clarifying requirements...")
+    TUI.phase_header(1, "QUESTIONNAIRE", "Clarifying requirements")
+    spinner = Spinner("Questionnaire analyzing goal").start()
     questions_result = dispatch_agent(
         "questionnaire",
         f"Analyze this goal and produce clarifying questions:\n\n{goal}\n\nProject directory: {workspace.get_path()}",
@@ -218,22 +221,23 @@ def orchestrate(goal: str, engine: str = None, project_dir: str = ".", interacti
     )
     
     if questions_result["status"] != "✅ SUCCESS":
-        # If questionnaire fails, proceed with assumptions
-        print("⚠️  Questionnaire failed — proceeding with assumptions")
+        spinner.stop(False, "Questionnaire failed — proceeding with assumptions")
         clarified_requirements = f"Goal: {goal}\n(No clarifications — building based on goal alone)"
     else:
+        spinner.stop(True, "Questions ready")
         clarified_requirements = questions_result["output"]
-        print(f"\n📋 Questions:\n{clarified_requirements[:500]}...")
+        TUI.info("Clarifying questions generated")
         
         if interactive:
-            print("\n⏸️  Answer the questions above, then press Enter to continue...")
-            input()
-            # In a real interactive mode, we'd collect answers here
+            answer = TUI.prompt("Review the questions above. Press Enter to continue, or type answers:")
+            if answer:
+                clarified_requirements += f"\n\nUser answers: {answer}"
     
     # ═══════════════════════════════════════════════════════
     # PHASE 2: PLANNER — Design the implementation
     # ═══════════════════════════════════════════════════════
-    print("\n📐 Phase 2: PLANNER — Designing implementation plan...")
+    TUI.phase_header(2, "PLANNER", "Designing implementation")
+    spinner = Spinner("Planner designing architecture").start()
     plan_result = dispatch_agent(
         "planner",
         f"Design a complete implementation plan for:\n\nGOAL:\n{goal}\n\nCLARIFIED REQUIREMENTS:\n{clarified_requirements}\n\nProject directory: {workspace.get_path()}",
@@ -244,25 +248,43 @@ def orchestrate(goal: str, engine: str = None, project_dir: str = ".", interacti
     )
     
     if plan_result["status"] != "✅ SUCCESS":
+        spinner.stop(False, "Planner failed")
         return {"error": "Planner failed", "details": plan_result}
     
-    print(f"\n📝 Plan:\n{plan_result['output'][:500]}...")
+    spinner.stop(True, "Plan ready")
+    TUI.info("Implementation plan designed")
     
     # ═══════════════════════════════════════════════════════
     # PHASE 3: EXECUTE — Dispatch specialist agents
     # ═══════════════════════════════════════════════════════
-    print("\n🚀 Phase 3: EXECUTE — Dispatching specialist agents...")
+    TUI.phase_header(3, "EXECUTE", "Dispatching specialist agents")
     tasks = parse_tasks(plan_result["output"], goal, engine)
+    
+    for t in tasks:
+        TUI.agent_start(t["agent"], t.get("engine") or engine or "auto")
+    
+    spinner = Spinner(f"Running {len(tasks)} agents").start()
     results = dispatch_parallel(tasks, config)
+    spinner.stop(True, f"{len(tasks)} agents completed")
+    
+    # Show results
+    for r in results:
+        if "SUCCESS" in r.get("status", ""):
+            TUI.agent_success(r["agent"], 0)
+        else:
+            TUI.agent_fail(r["agent"], r.get("error", "Unknown"))
     
     # ═══════════════════════════════════════════════════════
     # PHASE 4: DEBUG — Fix any issues
     # ═══════════════════════════════════════════════════════
     failed_agents = [r for r in results if r.get("status") != "✅ SUCCESS"]
     if failed_agents:
-        print(f"\n🐛 Phase 4: DEBUG — {len(failed_agents)} agent(s) need debugging...")
+        TUI.phase_header(4, "DEBUG", f"Fixing {len(failed_agents)} failure(s)")
         
         for failed in failed_agents:
+            TUI.agent_debug(failed["agent"])
+            spinner = Spinner(f"Debugging {failed['agent']}").start()
+            
             debug_result = dispatch_agent(
                 "debugger",
                 f"Debug this failed agent output:\n\nAgent: {failed['agent']}\nError: {failed.get('error', 'Unknown')}\n\nOriginal task context:\n{plan_result['output'][:1000]}",
@@ -272,7 +294,7 @@ def orchestrate(goal: str, engine: str = None, project_dir: str = ".", interacti
                 workspace=workspace,
             )
             if debug_result["status"] == "✅ SUCCESS":
-                # Replace failed result with debugged version
+                spinner.stop(True, f"{failed['agent']} fixed")
                 for i, r in enumerate(results):
                     if r["agent"] == failed["agent"]:
                         results[i] = {
@@ -283,13 +305,18 @@ def orchestrate(goal: str, engine: str = None, project_dir: str = ".", interacti
                             "original_error": failed.get("error", ""),
                             "debug_notes": debug_result["output"][:200]
                         }
+            else:
+                spinner.stop(False, f"{failed['agent']} still broken")
     else:
-        print("\n✅ Phase 4: DEBUG — No failures detected!")
+        TUI.phase_header(4, "DEBUG", "Checking for issues")
+        TUI.success("No failures detected")
     
     # ═══════════════════════════════════════════════════════
     # PHASE 5: SHIP — Final review
     # ═══════════════════════════════════════════════════════
-    print("\n🔍 Phase 5: SHIP — Tech Lead final review...")
+    TUI.phase_header(5, "SHIP", "Tech Lead final review")
+    spinner = Spinner("Tech Lead reviewing").start()
+    
     review_context = "\n\n".join([
         f"## {r['agent']} ({r.get('status', '?')})\n{r.get('output', '')[:500]}"
         for r in results
@@ -304,10 +331,25 @@ def orchestrate(goal: str, engine: str = None, project_dir: str = ".", interacti
         workspace=workspace,
     )
     
+    if review_result["status"] == "✅ SUCCESS":
+        spinner.stop(True, "Review complete")
+    else:
+        spinner.stop(False, "Review failed")
+    
     # ═══════════════════════════════════════════════════════
-    # COMPILE FINAL REPORT
+    # FINAL SUMMARY
     # ═══════════════════════════════════════════════════════
     workspace.complete("completed")
+    
+    total = len(results)
+    succeeded = len([r for r in results if "SUCCESS" in r.get("status", "")])
+    failed_count = len([r for r in results if "FAILED" in r.get("status", "")])
+    debugged = len([r for r in results if "DEBUG" in r.get("status", "")])
+    duration = (datetime.now() - workspace.created_at).total_seconds()
+    
+    TUI.divider()
+    TUI.summary(total, succeeded, failed_count, debugged, duration)
+    TUI.complete(str(workspace.get_path()))
     
     report = {
         "goal": goal,

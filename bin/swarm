@@ -122,8 +122,11 @@ function run(args) {
     process.exit(1);
   }
 
+  // For --list commands, show banner first
+  const isListCmd = args.some(a => a.includes('list'));
+  
   const child = spawn(python, [orchestratorPath, ...args], {
-    cwd: process.cwd(), // Use current directory as project root
+    cwd: process.cwd(),
     stdio: 'inherit',
     env: {
       ...process.env,
