@@ -26,8 +26,11 @@ from pathlib import Path
 # Add engines to path
 sys.path.insert(0, str(Path(__file__).parent))
 from engines.adapter import (
-    get_engine, register_engine, list_engines, detect_available_engine, GenericEngine, BaseEngine
+    get_engine, register_engine, list_engines, detect_available_engine, detect_all_available, GenericEngine, BaseEngine
 )
+from core.workspace import Workspace, WorkspaceManager
+from core.command_executor import CommandExecutor, CommandSafety
+from core.self_healer import SelfHealer, HealingStrategy
 
 # Paths
 SWARM_ROOT = Path(__file__).parent
@@ -53,7 +56,8 @@ def dispatch_agent(
     task: str,
     context: str = "",
     engine_name: str = None,
-    config: dict = None
+    config: dict = None,
+    workspace: Workspace = None,
 ) -> dict:
     """Dispatch a task to a specific agent via an engine"""
     
@@ -103,15 +107,17 @@ def dispatch_agent(
     if context:
         full_task = f"CONTEXT:\n{context}\n\nTASK:\n{task}"
     
-    # Create output directory
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_dir = OUTPUT_DIR / f"{agent_name}_{timestamp}"
+    # Create output directory — in workspace if provided, otherwise in swarm output/
+    if workspace:
+        run_dir = workspace.get_path() / ".swarm-output" / f"{agent_name}_{timestamp}"
+    else:
+        run_dir = OUTPUT_DIR / f"{agent_name}_{timestamp}"
     run_dir.mkdir(parents=True, exist_ok=True)
     
     print(f"🔄 [{engine_name}] Dispatching to {agent_name}...")
     
     try:
-        result = engine.run(agent_file, full_task, str(run_dir))
+        result = engine.run(agent_file, full_task, str(workspace.get_path() if workspace else run_dir))
         
         # Save output
         output_file = run_dir / "output.md"
@@ -186,7 +192,14 @@ def orchestrate(goal: str, engine: str = None, project_dir: str = ".", interacti
     """
     config = load_config()
     
+    # ═══════════════════════════════════════════════════════
+    # CREATE WORKSPACE — isolated project directory
+    # ═══════════════════════════════════════════════════════
+    ws_manager = WorkspaceManager(project_dir if project_dir != "." else None)
+    workspace = ws_manager.create_workspace(goal)
+    
     print(f"\n🎯 GOAL: {goal}")
+    print(f"📁 WORKSPACE: {workspace.get_path()}")
     print(f"🔧 ENGINE: {engine or config.get('default_engine', 'claude')}")
     print("=" * 60)
     
@@ -196,10 +209,11 @@ def orchestrate(goal: str, engine: str = None, project_dir: str = ".", interacti
     print("\n❓ Phase 1: QUESTIONNAIRE — Clarifying requirements...")
     questions_result = dispatch_agent(
         "questionnaire",
-        f"Analyze this goal and produce clarifying questions:\n\n{goal}\n\nProject directory: {project_dir}",
-        context=f"Project at {project_dir}. Be thorough about scope, users, data, auth, edge cases.",
+        f"Analyze this goal and produce clarifying questions:\n\n{goal}\n\nProject directory: {workspace.get_path()}",
+        context=f"Project at {workspace.get_path()}. Be thorough about scope, users, data, auth, edge cases.",
         engine_name=engine,
-        config=config
+        config=config,
+        workspace=workspace,
     )
     
     if questions_result["status"] != "✅ SUCCESS":
@@ -221,10 +235,11 @@ def orchestrate(goal: str, engine: str = None, project_dir: str = ".", interacti
     print("\n📐 Phase 2: PLANNER — Designing implementation plan...")
     plan_result = dispatch_agent(
         "planner",
-        f"Design a complete implementation plan for:\n\nGOAL:\n{goal}\n\nCLARIFIED REQUIREMENTS:\n{clarified_requirements}\n\nProject directory: {project_dir}",
+        f"Design a complete implementation plan for:\n\nGOAL:\n{goal}\n\nCLARIFIED REQUIREMENTS:\n{clarified_requirements}\n\nProject directory: {workspace.get_path()}",
         context="Design architecture, file structure, ordered tasks with dependencies. Be specific.",
         engine_name=engine,
-        config=config
+        config=config,
+        workspace=workspace,
     )
     
     if plan_result["status"] != "✅ SUCCESS":
@@ -252,7 +267,8 @@ def orchestrate(goal: str, engine: str = None, project_dir: str = ".", interacti
                 f"Debug this failed agent output:\n\nAgent: {failed['agent']}\nError: {failed.get('error', 'Unknown')}\n\nOriginal task context:\n{plan_result['output'][:1000]}",
                 context=f"Find root cause and fix. Original goal: {goal}",
                 engine_name=engine,
-                config=config
+                config=config,
+                workspace=workspace,
             )
             if debug_result["status"] == "✅ SUCCESS":
                 # Replace failed result with debugged version
@@ -283,14 +299,18 @@ def orchestrate(goal: str, engine: str = None, project_dir: str = ".", interacti
         f"Final review of all agent outputs for consistency, quality, and completeness:\n\n{review_context}",
         context=f"Goal: {goal}. Check for conflicts, missing pieces, quality issues.",
         engine_name=engine,
-        config=config
+        config=config,
+        workspace=workspace,
     )
     
     # ═══════════════════════════════════════════════════════
     # COMPILE FINAL REPORT
     # ═══════════════════════════════════════════════════════
+    workspace.complete("completed")
+    
     report = {
         "goal": goal,
+        "workspace": str(workspace.get_path()),
         "engine": engine or config.get("default_engine"),
         "timestamp": datetime.now().isoformat(),
         "workflow": {
@@ -309,6 +329,10 @@ def orchestrate(goal: str, engine: str = None, project_dir: str = ".", interacti
     
     report_file = OUTPUT_DIR / f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     report_file.write_text(json.dumps(report, indent=2, default=str))
+    
+    # Also save report in workspace
+    ws_report = workspace.get_path() / ".swarm-report.json"
+    ws_report.write_text(json.dumps(report, indent=2, default=str))
     
     print(f"\n{'=' * 60}")
     print(f"✅ COMPLETE! Agents: {report['agents_used']} | "
