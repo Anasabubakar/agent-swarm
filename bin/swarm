@@ -150,6 +150,11 @@ function main() {
 
   // No args — launch interactive CLI
   if (args.length === 0) {
+    const python = checkPython();
+    if (!python) {
+      console.error(`${c.red}Error: Python 3 is required but not found.${c.reset}`);
+      process.exit(1);
+    }
     const cliPath = join(SWARM_ROOT, 'src', 'swarm_cli.py');
     if (existsSync(cliPath)) {
       const child = spawn(python, [cliPath], {
@@ -167,7 +172,6 @@ function main() {
       });
       return;
     }
-    // Fallback if CLI not found
     help();
     process.exit(0);
   }
