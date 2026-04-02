@@ -2,7 +2,7 @@
 # Agent Swarm Installer
 # Usage: curl -fsSL https://raw.githubusercontent.com/Anasabubakar/agent-swarm/main/install.sh | bash
 #
-# Or: npm install -g @anasabubakar/swarm
+# Or: npm install -g @anas.abubakar/swarm
 
 set -e
 
