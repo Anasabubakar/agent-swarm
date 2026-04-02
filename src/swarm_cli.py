@@ -475,6 +475,96 @@ def handle_slash(text):
         print(f"  {C.t(C.GRN,'✓')} Cleared\n")
         return True
     
+    if cmd == "model":
+        # Interactive model selector with arrow key navigation
+        all_models = [
+            ("gemini-2.5-pro", "Gemini", "Most capable"),
+            ("gemini-2.5-flash", "Gemini", "Fast and cheap"),
+            ("gemini-2.0-flash", "Gemini", "Latest fast"),
+            ("claude-opus-4", "Claude", "Most powerful"),
+            ("claude-sonnet-4", "Claude", "Best balance"),
+            ("claude-haiku", "Claude", "Fastest"),
+            ("kilo-auto", "Kilo", "Auto-select"),
+            ("o4-mini", "Codex", "Fast coding"),
+            ("o3", "Codex", "Deep reasoning"),
+            ("gpt-4.1", "Codex", "Latest GPT"),
+        ]
+        
+        selected = 0
+        
+        def draw_models():
+            sys.stdout.write('\r\033[K')
+            for i in range(len(all_models) + 2):  # +2 for header and footer
+                sys.stdout.write('\033[1A\r\033[K')
+            sys.stdout.flush()
+            
+            print(f"\n  {C.t(C.B + C.CYN, 'Select a model:')}")
+            print(f"  {C.t(C.D, '─'*45)}")
+            
+            for i, (name, eng, desc) in enumerate(all_models):
+                marker = f"{C.t(C.GRN, '▸')}" if i == selected else " "
+                installed_marker = f"{C.t(C.GRN, '✓')}" if shutil.which(eng.lower()) else f"{C.t(C.RED, '✗')}"
+                style = f"{C.t(C.B + C.WHT, name)}" if i == selected else f"{C.t(C.D, name)}"
+                print(f"  {marker} {installed_marker} {style:<25} {C.t(C.D, desc)}")
+            
+            print(f"\n  {C.t(C.D, '↑/↓ navigate  Enter select  ESC cancel')}")
+        
+        # Draw initial
+        print()
+        draw_models()
+        
+        import tty, termios as _termios
+        fd = sys.stdin.fileno()
+        old = _termios.tcgetattr(fd)
+        
+        try:
+            tty.setraw(fd)
+            while True:
+                ch = sys.stdin.read(1)
+                
+                if ch == '\x1b':
+                    ch2 = sys.stdin.read(1)
+                    if ch2 == '[':
+                        ch3 = sys.stdin.read(1)
+                        if ch3 == 'A':  # Up
+                            selected = max(0, selected - 1)
+                            draw_models()
+                        elif ch3 == 'B':  # Down
+                            selected = min(len(all_models) - 1, selected + 1)
+                            draw_models()
+                    continue
+                
+                if ch in ('\r', '\n'):  # Enter
+                    break
+                
+                if ch == '\x03':  # CTRL+C
+                    selected = -1
+                    break
+        finally:
+            _termios.tcsetattr(fd, _termios.TCSADRAIN, old)
+        
+        # Clear the selector
+        for i in range(len(all_models) + 4):
+            sys.stdout.write('\033[1A\r\033[K')
+        sys.stdout.flush()
+        
+        if selected >= 0:
+            name, eng, desc = all_models[selected]
+            model_to_engine = {
+                "gemini-2.5-pro": "gemini", "gemini-2.5-flash": "gemini", "gemini-2.0-flash": "gemini",
+                "claude-opus-4": "claude", "claude-sonnet-4": "claude", "claude-haiku": "claude",
+                "kilo-auto": "kilo",
+                "o4-mini": "codex", "o3": "codex", "gpt-4.1": "codex",
+            }
+            engine = model_to_engine[name]
+            model = name
+            pref = {"engine": engine, "model": model}
+            Path(CWD / ".swarm-model.json").write_text(json.dumps(pref))
+            print(f"  {C.t(C.GRN, '✓')} Model: {C.t(C.B, name)} ({eng}) - {desc}\n")
+        else:
+            print(f"  {C.t(C.D, 'Cancelled')}\n")
+        return True
+    
     if cmd.startswith("model list"):
         print(f"""
   {C.t(C.B, 'Available Models')}
