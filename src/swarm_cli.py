@@ -12,7 +12,8 @@
   ╚════════════════════════════════════════╝
 """
 
-import sys, os, json, subprocess, shutil, random, termios, tty
+import sys, os, json, subprocess, shutil, random
+import tty, termios
 from pathlib import Path
 from datetime import datetime
 
