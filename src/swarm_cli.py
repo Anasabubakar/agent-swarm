@@ -769,7 +769,7 @@ def main():
             elif action == "question":
                 # Route question to connected AI engine (non-interactive mode)
                 if engine == "gemini":
-                    cmd_parts = ["gemini"]
+                    cmd_parts = ["gemini", "--skip-git-repo-check"]
                     if model:
                         cmd_parts.extend(["-m", model])
                     cmd_parts.extend(["-p", text])
