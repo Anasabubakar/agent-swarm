@@ -528,8 +528,20 @@ def main():
                 print(f"\n  {reply}\n")
             
             elif action == "question":
-                print(f"\n  {C.t(C.BLU,'💡')} Connect an AI engine to answer questions.")
-                print(f"  {C.t(C.D,'Or give me a build task to use the swarm.')}\n")
+                # Route question to connected AI engine
+                if engine == "gemini":
+                    run_cmd(f'gemini -p "{text}"')
+                elif engine in ("kilo", "kilocode"):
+                    run_cmd(f'kilo run --auto "{text}"')
+                elif engine == "codex":
+                    run_cmd(f'codex "{text}"')
+                elif engine == "claude":
+                    run_cmd(f'claude --print "{text}"')
+                elif engine == "opencode":
+                    run_cmd(f'opencode run "{text}"')
+                else:
+                    print(f"\n  {C.t(C.BLU, 'No engine available to answer questions.')}")
+                    print(f"  {C.t(C.D, 'Install one: gemini, kilo, claude, codex, opencode')}\n")
             
             elif action == "file":
                 words = text.split()
