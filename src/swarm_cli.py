@@ -20,6 +20,10 @@ SWARM_ROOT = Path(os.environ.get("SWARM_ROOT", Path(__file__).parent.parent))
 VERSION = "1.0.5"
 CWD = os.getcwd()
 
+# Reset terminal state on startup (clean up any escape codes from previous sessions)
+sys.stdout.write('\033[0m\033[?25h')  # Reset colors, show cursor
+sys.stdout.flush()
+
 import random
 
 WELCOME = [
@@ -485,10 +489,16 @@ def main():
         
         except KeyboardInterrupt:
             print(f"\n  {C.t(C.D, random.choice(GOODBYE))}\n")
+            sys.stdout.write('\033[0m\033[?25h')
+            sys.stdout.flush()
             break
         except EOFError:
             print()
             break
+    
+    # Clean terminal state on exit
+    sys.stdout.write('\033[0m\033[?25h')
+    sys.stdout.flush()
 
 if __name__ == "__main__":
     main()

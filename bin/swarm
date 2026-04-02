@@ -179,6 +179,46 @@ function run(args) {
 // Main
 async function main() {
   const args = process.argv.slice(2);
+  const currentVersion = getVersion();
+
+  // Check for updates BEFORE doing anything else
+  if (args.length === 0 || (!args.includes('--version') && !args.includes('--help'))) {
+    const newVersion = await checkForUpdates(currentVersion);
+    if (newVersion) {
+      console.log(`\n  ${c.yellow}⚠  Update available: v${currentVersion} → v${newVersion}${c.reset}`);
+      console.log(`  ${c.dim}Run: npm update -g @anasabubakar/swarm${c.reset}\n`);
+      
+      // Ask user what to do
+      process.stdout.write(`  ${c.cyan}[u]${c.reset} Update now  ${c.cyan}[s]${c.reset} Skip\n  ${c.white}?${c.reset} `);
+      
+      // Wait for single keypress
+      const stdin = process.stdin;
+      stdin.setRawMode(true);
+      stdin.resume();
+      
+      const choice = await new Promise((resolve) => {
+        stdin.once('data', (key) => {
+          const ch = key.toString().toLowerCase();
+          process.stdout.write(ch + '\n');
+          stdin.setRawMode(false);
+          resolve(ch);
+        });
+      });
+      
+      if (choice === 'u') {
+        console.log(`\n  ${c.cyan}⠋${c.reset} Updating...`);
+        try {
+          execSync('npm update -g @anasabubakar/swarm', { stdio: 'pipe', timeout: 60000 });
+          console.log(`  ${c.green}✓${c.reset} Updated to v${newVersion}! Restart swarm to use it.\n`);
+          process.exit(0);
+        } catch (e) {
+          console.log(`  ${c.red}✗${c.reset} Update failed. Try manually: npm update -g @anasabubakar/swarm\n`);
+        }
+      } else {
+        console.log(`  ${c.dim}Continuing with v${currentVersion}${c.reset}\n`);
+      }
+    }
+  }
 
   // No args — launch interactive CLI
   if (args.length === 0) {
@@ -202,7 +242,11 @@ async function main() {
           SWARM_ROOT: SWARM_ROOT,
         },
       });
-      child.on('exit', (code) => process.exit(code || 0));
+      child.on('exit', (code) => {
+        // Reset terminal — clean up any escape codes from child process
+        try { process.stdout.write('\x1b[0m\x1b[?25h'); } catch {}
+        process.exit(code || 0);
+      });
       child.on('error', (err) => {
         console.error(`${c.red}Error: ${err.message}${c.reset}`);
         process.exit(1);
