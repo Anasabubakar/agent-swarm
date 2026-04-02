@@ -217,7 +217,7 @@ def run_swarm(goal, engine):
     cmd.append(goal)
     try:
         proc = subprocess.Popen(cmd, cwd=CWD)
-        proc.wait(timeout=600)
+        proc.wait(timeout=1800)  # 30 minutes for complex tasks
         return proc.returncode == 0
     except subprocess.TimeoutExpired:
         proc.kill()
@@ -329,8 +329,43 @@ def handle_slash(text):
         print(f"  {C.t(C.D,'Use --engine <name> when running goals')}\n")
         return True
     
+    if cmd.startswith("employee list"):
+        # Actually list the agents
+        agents_dir = SWARM_ROOT / "agents"
+        if not agents_dir.exists():
+            print(f"  {C.t(C.RED,'Agents directory not found')}\n")
+            return True
+        
+        all_agents = []
+        for root, dirs, files in os.walk(agents_dir):
+            for f in files:
+                if f.endswith('.md'):
+                    rel = os.path.relpath(os.path.join(root, f), agents_dir)
+                    category = rel.split('/')[0] if '/' in rel else 'custom'
+                    name = f.replace('.md','')
+                    all_agents.append((name, category))
+        
+        # Group by category
+        categories = {}
+        for name, cat in all_agents:
+            if cat not in categories:
+                categories[cat] = []
+            categories[cat].append(name)
+        
+        print(f"\n  {C.t(C.B, f'Agents ({len(all_agents)} total)')}")
+        print(f"  {C.t(C.D, '─'*40)}")
+        for cat in sorted(categories.keys()):
+            names = sorted(categories[cat])
+            print(f"\n  {C.t(C.CYN, cat.upper())} ({len(names)})")
+            for name in names[:15]:
+                print(f"    {C.t(C.D, '.')} {name}")
+            if len(names) > 15:
+                print(f"    {C.t(C.D, f'... and {len(names)-15} more')}")
+        print()
+        return True
+    
     if cmd.startswith("employee"):
-        print(f"  {C.t(C.D,'245 agents available. Build a goal and they auto-activate.')}\n")
+        print(f"  {C.t(C.D, 'Commands:')} /employee list {C.t(C.D, '(browse all agents)')}\n")
         return True
     
     print(f"  {C.t(C.RED,'Unknown: /'+cmd)}  /help\n")

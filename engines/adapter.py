@@ -26,7 +26,7 @@ class BaseEngine:
     system_prompt_flag: str = "--system-prompt"
     task_position: str = "end"  # "end" means task goes at the end
     auto_flag: str = ""  # optional flag for autonomous mode
-    timeout: int = 300  # 5 minutes default (reduced from 10)
+    timeout: int = 1800  # 30 minutes default for complex tasks like motion graphics
     needs_pty: bool = False  # whether this engine needs a pseudo-terminal
     
     @classmethod
