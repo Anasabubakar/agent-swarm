@@ -31,27 +31,37 @@ sys.stdout.flush()
 
 def clean_input(prompt=""):
     """
-    Input that properly handles backspace and arrow keys.
-    Left/right arrows move cursor, backspace deletes.
-    No dropdown, no fancy stuff — just works.
+    Proper text input with backspace, delete, and arrow keys.
     """
     fd = sys.stdin.fileno()
     old = termios.tcgetattr(fd)
     
-    buf = []       # Characters before cursor
-    after = []     # Characters after cursor (for right-arrow support)
+    buf = []    # Characters before cursor
+    after = []  # Characters after cursor (for right-arrow)
     
     sys.stdout.write(prompt)
     sys.stdout.flush()
     
-    try:
-        tty.setraw(fd)
-    except termios.error:
-        # Terminal state corrupted — fall back to regular input
-        termios.tcsetattr(fd, termios.TCSADRAIN, old)
-        return input(prompt)
+    def redraw():
+        """Redraw the entire line from cursor position"""
+        # Move to start of input
+        if buf:
+            sys.stdout.write(f'\x1b[{len(buf)}D')
+        # Clear everything after prompt
+        total = len(buf) + len(after)
+        sys.stdout.write(' ' * total)
+        # Move back to start
+        sys.stdout.write(f'\x1b[{total}D')
+        # Write all characters
+        sys.stdout.write(''.join(buf))
+        if after:
+            sys.stdout.write(''.join(reversed(after)))
+            # Move cursor back to correct position
+            sys.stdout.write(f'\x1b[{len(after)}D')
+        sys.stdout.flush()
     
     try:
+        tty.setraw(fd)
         
         while True:
             ch = sys.stdin.read(1)
@@ -60,7 +70,7 @@ def clean_input(prompt=""):
             if ch in ('\r', '\n'):
                 sys.stdout.write('\r\n')
                 sys.stdout.flush()
-                return ''.join(buf + after)
+                return ''.join(buf + list(reversed(after)))
             
             # CTRL+C
             if ch == '\x03':
@@ -74,190 +84,103 @@ def clean_input(prompt=""):
                 sys.stdout.flush()
                 raise EOFError
             
-            # Escape sequence (arrow keys)
+            # Escape sequence
             if ch == '\x1b':
-                ch2 = sys.stdin.read(1)
-                if ch2 == '[':
-                    ch3 = sys.stdin.read(1)
-                    if ch3 == 'D':  # Left arrow
-                        if buf:
-                            after.append(buf.pop())
-                            sys.stdout.write('\x1b[D')  # Move cursor left
-                            sys.stdout.flush()
-                    elif ch3 == 'C':  # Right arrow
+                seq = sys.stdin.read(2)
+                if seq == '[D':  # Left arrow
+                    if buf:
+                        after.append(buf.pop())
+                        sys.stdout.write('\x1b[D')
+                        sys.stdout.flush()
+                elif seq == '[C':  # Right arrow
+                    if after:
+                        buf.append(after.pop())
+                        sys.stdout.write('\x1b[C')
+                        sys.stdout.flush()
+                elif seq == '[3':  # Possible delete key
+                    tilde = sys.stdin.read(1)  # Should be '~'
+                    if tilde == '~' and after:  # Delete key
+                        after.pop()
+                        # Redraw from current position
                         if after:
-                            buf.append(after.pop())
-                            sys.stdout.write('\x1b[C')  # Move cursor right
-                            sys.stdout.flush()
-                    elif ch3 == 'A':  # Up arrow — ignore
-                        pass
-                    elif ch3 == 'B':  # Down arrow — ignore
-                        pass
+                            sys.stdout.write(''.join(reversed(after)))
+                            sys.stdout.write(' ')
+                            sys.stdout.write(f'\x1b[{len(after) + 1}D')
+                        else:
+                            sys.stdout.write(' \x1b[D')
+                        sys.stdout.flush()
+                elif seq == '[H':  # Home
+                    if buf:
+                        sys.stdout.write(f'\x1b[{len(buf)}D')
+                        after = list(reversed(buf)) + after
+                        buf = []
+                        sys.stdout.flush()
+                elif seq == '[F':  # End
+                    if after:
+                        sys.stdout.write(f'\x1b[{len(after)}C')
+                        buf = buf + list(reversed(after))
+                        after = []
+                        sys.stdout.flush()
                 # Ignore other escape sequences
                 continue
             
-            # Backspace / Delete
+            # Backspace
             if ch in ('\x7f', '\b'):
                 if buf:
                     buf.pop()
-                    # Move cursor back, write space, move back again
-                    sys.stdout.write('\b \b')
-                    # If there are chars after cursor, redraw them
+                    sys.stdout.write('\b \b')  # Move back, clear, move back
                     if after:
-                        sys.stdout.write(''.join(after))
-                        sys.stdout.write(' ' * len(after))
-                        sys.stdout.write(f'\x1b[{len(after)}D')  # Move cursor back
+                        # Redraw characters after cursor
+                        sys.stdout.write(''.join(reversed(after)))
+                        sys.stdout.write(' ')
+                        sys.stdout.write(f'\x1b[{len(after) + 1}D')
                     sys.stdout.flush()
                 continue
             
-            # CTRL+A — move to beginning
-            if ch == '\x01':
-                if buf:
-                    sys.stdout.write(f'\x1b[{len(buf)}D')  # Move left by len(buf)
-                    after = buf[::-1] + after
+            # CTRL+U - clear line
+            if ch == '\x15':
+                total = len(buf) + len(after)
+                if total > 0:
+                    sys.stdout.write(f'\x1b[{total}D')
+                    sys.stdout.write(' ' * total)
+                    sys.stdout.write(f'\x1b[{total}D')
                     buf = []
-                    sys.stdout.flush()
-                continue
-            
-            # CTRL+E — move to end
-            if ch == '\x05':
-                if after:
-                    sys.stdout.write(f'\x1b[{len(after)}C')  # Move right by len(after)
-                    buf = buf + after[::-1]
                     after = []
                     sys.stdout.flush()
                 continue
             
-            # CTRL+U — clear line
-            if ch == '\x15':
-                total = len(buf) + len(after)
-                sys.stdout.write(f'\x1b[{total}D')  # Move to start
-                sys.stdout.write(' ' * total)         # Clear
-                sys.stdout.write(f'\x1b[{total}D')    # Move back to start
-                buf = []
-                after = []
-                sys.stdout.flush()
+            # CTRL+A - beginning
+            if ch == '\x01':
+                if buf:
+                    sys.stdout.write(f'\x1b[{len(buf)}D')
+                    after = list(reversed(buf)) + after
+                    buf = []
+                    sys.stdout.flush()
                 continue
             
-            # Regular character
-            if ord(ch) >= 32:  # Printable characters only
+            # CTRL+E - end
+            if ch == '\x05':
+                if after:
+                    sys.stdout.write(f'\x1b[{len(after)}C')
+                    buf = buf + list(reversed(after))
+                    after = []
+                    sys.stdout.flush()
+                continue
+            
+            # Regular printable character
+            if ord(ch) >= 32:
                 buf.append(ch)
                 if after:
-                    # Insert in middle — write char, then redraw after
+                    # Insert in middle
                     sys.stdout.write(ch)
                     sys.stdout.write(''.join(reversed(after)))
-                    sys.stdout.write(f'\x1b[{len(after)}D')  # Move cursor back to insertion point
+                    sys.stdout.write(f'\x1b[{len(after)}D')
                 else:
                     sys.stdout.write(ch)
                 sys.stdout.flush()
     
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
-
-WELCOME = [
-    "Right then. Let's get to work.",
-    "Another day, another codebase to save.",
-    "Swarm is online. Try not to break anything.",
-    "245 agents. Zero patience for bad code.",
-    "I woke up and chose productivity. Barely.",
-    "Fresh session. Clean slate. Let's see how long that lasts.",
-    "Loaded and ready. Unlike my motivation on Mondays.",
-    "Your personal army of AI agents is assembled.",
-    "Swarm online. My developers did not sleep for this.",
-    "Good to see you again. Or for the first time. I don't judge.",
-    "Let me guess — you have a 'quick' project for me.",
-    "Ready to turn your caffeine into code.",
-    "The swarm is awake. Pray for your codebase.",
-    "Another human who thinks their idea is 'simple'. I'm ready.",
-]
-
-LOADING = [
-    "Convincing the agents this is a real job...",
-    "Herding digital cats...",
-    "Asking 245 agents to stop arguing...",
-    "Loading. Unlike your side project.",
-    "The agents are having a standup meeting. Without you.",
-    "Negotiating with the codebase...",
-    "Pretending this will only take 5 minutes...",
-    "Waking up the lazy agents...",
-    "Asking Gemini if it's smarter than Claude...",
-    "Running faster than your deadlines...",
-    "Generating bugs... I mean features...",
-    "The planner is on its third coffee...",
-    "Deploying hope and a prayer...",
-    "Loading at the speed of Lagos traffic...",
-    "The debugger is already crying...",
-    "Compiling your ambition into reality...",
-    "Agents are arguing about tabs vs spaces...",
-    "One agent is on lunch break. Typical.",
-    "Asking the backend dev to please stop breaking things...",
-    "The frontend agent is judging your color choices...",
-]
-
-PHASE_TEXTS = {
-    "questionnaire": [
-        "Asking questions your PM should have asked...",
-        "Interrogating your idea. Nicely.",
-        "20 questions but make it professional.",
-        "Finding the holes in your plan before you do.",
-    ],
-    "planner": [
-        "Drawing the blueprint on a napkin...",
-        "Making a plan you'll probably ignore anyway...",
-        "Architecture decisions being made. Pray.",
-        "The planner is overthinking. As usual.",
-    ],
-    "execute": [
-        "Agents are building. Stay out of the way.",
-        "245 agents. One goal. What could go wrong.",
-        "Production line is running.",
-        "The agents are cooking. Let them work.",
-    ],
-    "debug": [
-        "Something broke. Shocking.",
-        "The debugger is earning its salary today.",
-        "Finding bugs. The agents left a few.",
-        "Who let the junior dev commit again.",
-    ],
-    "ship": [
-        "Final review. The tech lead is being picky.",
-        "Quality gate. Please hold.",
-        "The tech lead found 47 issues. Classic.",
-        "Almost there. Don't touch anything.",
-    ],
-}
-
-GOODBYE = [
-    "Goodbye. Your code is probably fine. Probably.",
-    "Logging off before I break something.",
-    "The swarm is going to sleep. Don't wake us.",
-    "Remember: git commit often. Unlike Anas.",
-    "Session over. Go touch grass.",
-    "Goodbye. May your tests pass on the first try. They won't.",
-    "The agents are clocking out. Union rules.",
-    "Leaving before the bugs find us.",
-    "Peace out. Don't forget to push your code.",
-    "If your code breaks after I leave, that's a you problem.",
-]
-
-SUCCESS_TEXTS = [
-    "Done. Against all odds.",
-    "It actually worked. I'm as surprised as you.",
-    "Mission accomplished. The agents survived.",
-    "Complete. Don't ask how.",
-    "Shipped. The code is scared but it's out there.",
-    "Finished. The agents want a raise.",
-]
-
-ERROR_TEXTS = [
-    "Well that didn't work. Try again.",
-    "Error 418: I'm a teapot. Just kidding, something broke.",
-    "The agents went on strike. Try again.",
-    "Failed successfully. Wait, no. Just failed.",
-    "Plot twist: it broke. Who could have predicted this.",
-    "The code said no. Rude, honestly.",
-]
-
 # Colors
 class C:
     R="\033[0m"; B="\033[1m"; D="\033[2m"
