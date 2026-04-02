@@ -8,7 +8,7 @@
   ║  ███████║╚███╔███╔╝██║  ██║██║  ██║██║ ╚═╝ ██║║
   ║  ╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝║
   ║  AI Assistant + Agent Swarm                      ║
-  ║  by Anas Abubakar • v1.0.10                      ║
+  ║  by Anas Abubakar • v1.0.14                      ║
   ╚════════════════════════════════════════╝
 """
 
@@ -18,12 +18,49 @@ from pathlib import Path
 from datetime import datetime
 
 SWARM_ROOT = Path(os.environ.get("SWARM_ROOT", Path(__file__).parent.parent))
-VERSION = "1.0.10"
+
+# Auto-sync version from package.json
+def _get_version():
+    try:
+        pkg = json.loads((SWARM_ROOT / "package.json").read_text())
+        return pkg.get("version", "1.0.0")
+    except:
+        return "1.0.0"
+
+VERSION = _get_version()
 CWD = os.getcwd()
 
 # Reset terminal state on startup (clean up any escape codes from previous sessions)
 sys.stdout.write('\033[0m\033[?25h')  # Reset colors, show cursor
 sys.stdout.flush()
+
+WELCOME = [
+    "Right then. Let's get to work.",
+    "Another day, another codebase to save.",
+    "Swarm is online. Try not to break anything.",
+    "245 agents. Zero patience for bad code.",
+    "I woke up and chose productivity. Barely.",
+    "Fresh session. Clean slate. Let's see how long that lasts.",
+    "Loaded and ready. Unlike my motivation on Mondays.",
+    "Your personal army of AI agents is assembled.",
+    "Good to see you again. Or for the first time.",
+    "Let me guess — you have a quick project for me.",
+    "Ready to turn your caffeine into code.",
+    "The swarm is awake. Pray for your codebase.",
+]
+
+GOODBYE = [
+    "Goodbye. Your code is probably fine. Probably.",
+    "Logging off before I break something.",
+    "The swarm is going to sleep.",
+    "Remember: git commit often. Unlike Anas.",
+    "Session over. Go touch grass.",
+    "Goodbye. May your tests pass on the first try.",
+    "The agents are clocking out. Union rules.",
+    "Leaving before the bugs find us.",
+    "Peace out. Don't forget to push your code.",
+    "If your code breaks after I leave, that is a you problem.",
+]
 
 # ═══════════════════════════════════════
 # CLEAN INPUT WITH PROPER KEY HANDLING
