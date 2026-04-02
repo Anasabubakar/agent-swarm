@@ -37,34 +37,32 @@ class Workspace:
         self.created_at = datetime.now()
         self.timestamp = self.created_at.strftime("%Y%m%d_%H%M%S")
         
-        # Create project directory name from goal
-        slug = goal.lower()
-        for char in [" ", "/", "\\", ":", "*", "?", "\"", "<", ">", "|", "."]:
-            slug = slug.replace(char, "-")
-        slug = slug[:30].strip("-")
-        # Remove multiple dashes
-        while "--" in slug:
-            slug = slug.replace("--", "-")
-        
-        self.name = f"{slug}-{self.timestamp}"
-        
-        # Create in current directory (or specified base)
+        # Workspace is the current directory, not a subdirectory
+        # .swarm folder inside it for internal metadata
         if base_dir and base_dir != ".":
-            self.path = Path(base_dir) / self.name
+            self.path = Path(base_dir)
         else:
-            self.path = Path.cwd() / self.name
+            self.path = Path.cwd()
         
-        self.meta_file = self.path / ".swarm-meta.json"
+        self.name = self.path.name
+        
+        self.meta_file = None  # Set in create()
         self.agents_run = []
     
     def create(self) -> Path:
         """Create the workspace directory structure"""
         self.path.mkdir(parents=True, exist_ok=True)
         
+        # Create .swarm subfolder for internal files only
+        swarm_dir = self.path / ".swarm"
+        swarm_dir.mkdir(exist_ok=True)
+        
+        # Meta file goes inside .swarm
+        self.meta_file = swarm_dir / "meta.json"
+        
         # Write metadata
         self._save_meta()
         
-        print(f"📁 Workspace created: {self.path}")
         return self.path
     
     def register_agent(self, agent_name: str, engine: str, status: str):
@@ -83,12 +81,14 @@ class Workspace:
     
     def get_meta(self) -> dict:
         """Get workspace metadata"""
-        if self.meta_file.exists():
+        if self.meta_file and self.meta_file.exists():
             return json.loads(self.meta_file.read_text())
         return {}
     
     def _save_meta(self):
         """Save workspace metadata"""
+        if not self.meta_file:
+            return
         meta = {
             "goal": self.goal,
             "created_at": self.created_at.isoformat(),
@@ -100,6 +100,8 @@ class Workspace:
     
     def complete(self, status: str = "completed"):
         """Mark workspace as complete"""
+        if not self.meta_file:
+            return
         meta = self.get_meta()
         meta["status"] = status
         meta["completed_at"] = datetime.now().isoformat()
