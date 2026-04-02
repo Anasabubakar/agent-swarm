@@ -55,6 +55,25 @@ GOODBYE = [
 ]
 
 # ═══════════════════════════════════════
+# CONFIRMATION DIALOG
+# ═══════════════════════════════════════
+
+def confirm(question, default=False):
+    """Ask for yes/no confirmation. Returns True/False."""
+    hint = "[Y/n]" if default else "[y/N]"
+    sys.stdout.write(f"\n  {C.t(C.YLW, '?')} {question} {C.t(C.D, hint)} ")
+    sys.stdout.flush()
+    
+    try:
+        answer = input().strip().lower()
+        if not answer:
+            return default
+        return answer in ('y', 'yes', 'yeah', 'sure', 'ok')
+    except (EOFError, KeyboardInterrupt):
+        return False
+
+
+# ═══════════════════════════════════════
 # CLEAN INPUT WITH PROPER KEY HANDLING
 # ═══════════════════════════════════════
 
@@ -785,12 +804,21 @@ def main():
                 cmd = text
                 if cmd.lower().startswith("run "): cmd = cmd[4:].strip()
                 elif cmd.lower() in ['ls','dir']: cmd = "ls -la"
-                run_cmd(cmd)
+                
+                # Check if dangerous
+                dangerous = any(cmd.lower().startswith(d) for d in ["rm ","rm -","git push","npm install","pip install","chmod","sudo","docker rm","docker run"])
+                if dangerous and not confirm(f"Run: {cmd}?"):
+                    print(f"  {C.t(C.D, 'Cancelled')}\n")
+                else:
+                    run_cmd(cmd)
             
             elif action == "build":
-                print()
-                run_swarm(text, engine)
-                print()
+                if confirm(f"Run swarm orchestrator for: '{text[:50]}...'?"):
+                    print()
+                    run_swarm(text, engine)
+                    print()
+                else:
+                    print(f"  {C.t(C.D, 'Cancelled')}\n")
             
             messages.append({"role":"assistant","content":f"Handled: {text}","time":datetime.now().isoformat()})
             memory_file.write_text(json.dumps(messages[-100:], indent=2))
