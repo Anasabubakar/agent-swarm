@@ -312,14 +312,19 @@ def run_swarm(goal, engine):
         print(f"\n  {C.t(C.YLW, '⏸ Cancelled')}")
         return False
 
-def run_cmd(command):
+def run_cmd(command, timeout=60):
     try:
-        r = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=120, cwd=CWD)
+        r = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=timeout, cwd=CWD)
         print()
         if r.stdout:
-            for line in r.stdout.split('\n')[:25]: print(f"  {line}")
-        if r.stderr: print(f"  {C.t(C.RED, r.stderr[:200])}")
+            for line in r.stdout.split('\n')[:30]:
+                if line.strip():
+                    print(f"  {line}")
+        if r.stderr and r.returncode != 0:
+            print(f"  {C.t(C.RED, r.stderr[:200])}")
         print()
+    except subprocess.TimeoutExpired:
+        print(f"\n  {C.t(C.YLW, 'Taking too long. Engine might be busy.')}\n")
     except Exception as e:
         print(f"  {C.t(C.RED, str(e))}\n")
 
@@ -528,20 +533,20 @@ def main():
                 print(f"\n  {reply}\n")
             
             elif action == "question":
-                # Route question to connected AI engine
+                # Route question to connected AI engine (non-interactive mode)
                 if engine == "gemini":
                     run_cmd(f'gemini -p "{text}"')
                 elif engine in ("kilo", "kilocode"):
                     run_cmd(f'kilo run --auto "{text}"')
                 elif engine == "codex":
-                    run_cmd(f'codex "{text}"')
+                    run_cmd(f'codex exec "{text}"')
                 elif engine == "claude":
-                    run_cmd(f'claude --print "{text}"')
+                    run_cmd(f'claude -p "{text}"')
                 elif engine == "opencode":
                     run_cmd(f'opencode run "{text}"')
                 else:
-                    print(f"\n  {C.t(C.BLU, 'No engine available to answer questions.')}")
-                    print(f"  {C.t(C.D, 'Install one: gemini, kilo, claude, codex, opencode')}\n")
+                    print(f"\n  {C.t(C.BLU, 'No engine available.')}")
+                    print(f"  {C.t(C.D, 'Install: gemini, kilo, claude, codex')}\n")
             
             elif action == "file":
                 words = text.split()
