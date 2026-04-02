@@ -4,7 +4,7 @@
   by Anas Abubakar
 """
 
-import sys, os, json, subprocess, shutil, random
+import sys, os, json, subprocess, shutil, random, time
 import tty, termios
 from pathlib import Path
 from datetime import datetime
@@ -312,21 +312,85 @@ def run_swarm(goal, engine):
         print(f"\n  {C.t(C.YLW, '⏸ Cancelled')}")
         return False
 
-def run_cmd(command, timeout=60):
+LOADING = [
+    "Convincing the AI this is worth answering...",
+    "The model is thinking. Give it a second.",
+    "Processing your question at the speed of Lagos traffic...",
+    "Asking the hard questions...",
+    "The AI is googling internally...",
+    "Thinking harder than your average CS exam...",
+    "Generating a response. Unlike your last relationship.",
+    "The model is on its third coffee...",
+    "Compiling wisdom from the internet...",
+    "Asking 245 agents for their opinion...",
+    "The AI is having an existential crisis about your question...",
+    "Loading answer... the model is being dramatic...",
+    "Running inference at the speed of thought...",
+    "The model is debating with itself...",
+]
+
+def loading_animation(timeout=500):
+    """Yield a spinner frame and witty phrase periodically"""
+    frames = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"]
+    phrase_idx = 0
+    frame_idx = 0
+    start = time.time()
+    last_phrase_change = start
+    
+    while (time.time() - start) < timeout:
+        frame = frames[frame_idx % len(frames)]
+        phrase = LOADING[phrase_idx % len(LOADING)]
+        elapsed = int(time.time() - start)
+        
+        sys.stdout.write(f"\r  {C.t(C.CYN, frame)} {phrase} {C.t(C.D, f'({elapsed}s)')}")
+        sys.stdout.flush()
+        
+        frame_idx += 1
+        if time.time() - last_phrase_change > 4:
+            phrase_idx += 1
+            last_phrase_change = time.time()
+        
+        yield
+        time.sleep(0.1)
+    
+    # Clear loading line
+    sys.stdout.write(f"\r\033[K")
+    sys.stdout.flush()
+
+
+def run_cmd(command, timeout=500):
+    """Run a command with loading animation and timeout"""
     try:
-        r = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=timeout, cwd=CWD)
+        proc = subprocess.Popen(
+            command, shell=True, 
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, cwd=CWD
+        )
+        
+        # Show loading animation while process runs
+        for _ in loading_animation(timeout):
+            if proc.poll() is not None:
+                break
+            time.sleep(0.1)
+        
+        # Check if still running after animation
+        if proc.poll() is None:
+            proc.kill()
+            print(f"\n  {C.t(C.YLW, 'Taking too long (500s). Killed.')}\n")
+            return
+        
+        stdout, stderr = proc.communicate(timeout=5)
         print()
-        if r.stdout:
-            for line in r.stdout.split('\n')[:30]:
+        if stdout:
+            for line in stdout.split('\n')[:30]:
                 if line.strip():
                     print(f"  {line}")
-        if r.stderr and r.returncode != 0:
-            print(f"  {C.t(C.RED, r.stderr[:200])}")
+        if stderr and proc.returncode != 0:
+            print(f"  {C.t(C.RED, stderr[:200])}")
         print()
-    except subprocess.TimeoutExpired:
-        print(f"\n  {C.t(C.YLW, 'Taking too long. Engine might be busy.')}\n")
+    
     except Exception as e:
-        print(f"  {C.t(C.RED, str(e))}\n")
+        print(f"\n  {C.t(C.RED, str(e))}\n")
 
 def check_update():
     try:
@@ -411,11 +475,61 @@ def handle_slash(text):
         print(f"  {C.t(C.GRN,'✓')} Cleared\n")
         return True
     
-    if cmd.startswith("model"):
-        engine_map = {"claude":"claude","gemini":"gemini","kilo":"kilo","codex":"codex","aider":"aider"}
-        installed = [k for k,v in engine_map.items() if shutil.which(v)]
-        print(f"\n  {C.t(C.B,'Installed:')} {', '.join(installed) if installed else 'none'}")
-        print(f"  {C.t(C.D,'Use --engine <name> when running goals')}\n")
+    if cmd.startswith("model list"):
+        print(f"""
+  {C.t(C.B, 'Available Models')}
+  {C.t(C.D, '─'*40)}
+  {C.t(C.CYN, 'GEMINI')}
+    gemini-2.5-pro          Most capable
+    gemini-2.5-flash        Fast and cheap
+    gemini-2.0-flash        Latest fast model
+
+  {C.t(C.CYN, 'CLAUDE')}
+    claude-opus-4           Most powerful
+    claude-sonnet-4         Best balance
+    claude-haiku            Fastest
+
+  {C.t(C.CYN, 'KILO')}
+    kilo-auto               Auto-select
+    kilo-pro                Pro model
+
+  {C.t(C.CYN, 'CODEX')}
+    o4-mini                 Fast coding
+    o3                      Deep reasoning
+    gpt-4.1                 Latest GPT
+
+  {C.t(C.D, 'Usage: /model gemini-2.5-pro')}
+""")
+        return True
+    
+    if cmd.startswith("model "):
+        # Check if it's an engine name or a model name
+        arg = cmd[6:].strip()
+        
+        # If it's an engine name
+        engine_map = {"claude":"claude","gemini":"gemini","kilo":"kilo","codex":"codex","aider":"aider","opencode":"opencode"}
+        if arg in engine_map:
+            engine = arg
+            print(f"  {C.t(C.GRN, '✓')} Engine: {C.t(C.B, engine)}\n")
+            return True
+        
+        # If it's a model name — figure out which engine it belongs to
+        model_to_engine = {
+            "gemini-2.5-pro": "gemini", "gemini-2.5-flash": "gemini", "gemini-2.0-flash": "gemini",
+            "claude-opus-4": "claude", "claude-sonnet-4": "claude", "claude-haiku": "claude",
+            "o4-mini": "codex", "o3": "codex", "gpt-4.1": "codex",
+            "kilo-auto": "kilo", "kilo-pro": "kilo",
+        }
+        
+        if arg in model_to_engine:
+            engine = model_to_engine[arg]
+            model = arg
+            # Save model preference
+            pref = {"engine": engine, "model": model}
+            Path(CWD / ".swarm-model.json").write_text(json.dumps(pref))
+            print(f"  {C.t(C.GRN, '✓')} Model: {C.t(C.B, arg)} ({engine})\n")
+        else:
+            print(f"  {C.t(C.RED, f'Unknown: {arg}')}  /model list to see options\n")
         return True
     
     if cmd.startswith("employee list"):
@@ -463,9 +577,20 @@ def handle_slash(text):
 
 def main():
     # Detect engines
-    engine_map = {"claude":"claude","gemini":"gemini","kilo":"kilo","codex":"codex","aider":"aider"}
+    engine_map = {"claude":"claude","gemini":"gemini","kilo":"kilo","codex":"codex","aider":"aider","opencode":"opencode"}
     installed = [k for k,v in engine_map.items() if shutil.which(v)]
     engine = installed[0] if installed else "auto"
+    model = None
+    
+    # Load model preference if saved
+    model_pref_file = Path(CWD) / ".swarm-model.json"
+    if model_pref_file.exists():
+        try:
+            pref = json.loads(model_pref_file.read_text())
+            if pref.get("engine") in installed:
+                engine = pref["engine"]
+                model = pref.get("model")
+        except: pass
     
     # Memory
     memory_file = Path(CWD) / ".swarm-chat.json"
@@ -535,9 +660,11 @@ def main():
             elif action == "question":
                 # Route question to connected AI engine (non-interactive mode)
                 if engine == "gemini":
-                    run_cmd(f'gemini -p "{text}"')
+                    model_flag = f"-m {model}" if model else ""
+                    run_cmd(f'gemini -p {model_flag} "{text}"')
                 elif engine in ("kilo", "kilocode"):
-                    run_cmd(f'kilo run --auto "{text}"')
+                    model_flag = f"-m {model}" if model else ""
+                    run_cmd(f'kilo run --auto {model_flag} "{text}"')
                 elif engine == "codex":
                     run_cmd(f'codex exec "{text}"')
                 elif engine == "claude":
