@@ -749,17 +749,15 @@ def main():
             elif action == "question":
                 # Route question to connected AI engine (non-interactive mode)
                 if engine == "gemini":
-                    model_flag = f"-m {model}" if model else ""
-                    cmd_parts = ["gemini", "-p"]
-                    if model_flag:
-                        cmd_parts.extend(model_flag.split())
-                    cmd_parts.append(text)
+                    cmd_parts = ["gemini"]
+                    if model:
+                        cmd_parts.extend(["-m", model])
+                    cmd_parts.extend(["-p", text])
                     run_cmd_list(cmd_parts)
                 elif engine in ("kilo", "kilocode"):
-                    model_flag = f"-m {model}" if model else ""
                     cmd_parts = ["kilo", "run", "--auto"]
-                    if model_flag:
-                        cmd_parts.extend(model_flag.split())
+                    if model:
+                        cmd_parts.extend(["-m", model])
                     cmd_parts.append(text)
                     run_cmd_list(cmd_parts)
                 elif engine == "codex":

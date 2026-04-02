@@ -116,19 +116,46 @@ class GeminiCLIEngine(BaseEngine):
     """Google Gemini CLI"""
     name = "gemini"
     command = "gemini"
-    system_prompt_flag = None  # Gemini doesn't have system prompt flag
+    system_prompt_flag = None
     auto_flag = None
     
     @classmethod
     def build_command(cls, system_prompt: str, task: str) -> list:
-        # Gemini uses -p for non-interactive prompt
-        # Save prompt to file to avoid shell escaping issues
-        import tempfile
-        prompt_file = os.path.join(tempfile.gettempdir(), f"swarm_prompt_{os.getpid()}.txt")
-        full_prompt = f"{system_prompt}\n\n---\n\nYour task: {task}\n\nComplete the task and return your results."
-        with open(prompt_file, 'w') as f:
-            f.write(full_prompt)
+        # Gemini -p takes prompt as argument, but long prompts break
+        # Use --model flag if available, and keep prompt short
+        full_prompt = f"{task}\n\nRole: {system_prompt[:200]}"
         return ["gemini", "-p", full_prompt]
+    
+    @classmethod
+    def run(cls, agent_file: str, task: str, output_dir: str = ".") -> dict:
+        """Run with stdin pipe to avoid shell escaping issues"""
+        import os as _os
+        agent_path = AGENTS_DIR / agent_file
+        if not agent_path.exists():
+            return {"stdout": "", "stderr": f"Agent file not found: {agent_file}", "returncode": 1}
+        
+        system_prompt = agent_path.read_text()
+        full_prompt = f"{system_prompt}\n\n---\n\nYour task: {task}\n\nComplete the task and return your results."
+        
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["gemini", "-p", full_prompt],
+                capture_output=True,
+                text=True,
+                timeout=cls.timeout,
+                cwd=output_dir
+            )
+            return {
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "returncode": result.returncode,
+                "command": f"gemini -p '<prompt>'"
+            }
+        except subprocess.TimeoutExpired:
+            return {"stdout": "", "stderr": f"Timed out after {cls.timeout}s", "returncode": 124, "command": ""}
+        except Exception as e:
+            return {"stdout": "", "stderr": str(e), "returncode": 1, "command": ""}
 
 
 class KiloCodeEngine(BaseEngine):
