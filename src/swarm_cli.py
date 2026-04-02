@@ -111,6 +111,26 @@ def clean_input(prompt=""):
     try:
         tty.setraw(fd)
         
+        # Detect paste: check if data is already buffered when we enter raw mode
+        import select as _sel
+        paste_buf = []
+        r, _, _ = _sel.select([fd], [], [], 0.05)
+        if r:
+            # Data waiting = user pasted before pressing Enter
+            raw = os.read(fd, 4096)
+            text = raw.decode('utf-8', errors='replace')
+            # Strip trailing newlines/carriage returns (the Enter key)
+            text = text.rstrip('\r\n')
+            # Handle internal newlines as spaces
+            text = text.replace('\n', ' ').replace('\r', '')
+            # Show the pasted text and allow editing
+            for ch in text:
+                if ord(ch) >= 32:
+                    buf.append(ch)
+            # Redraw
+            sys.stdout.write(''.join(buf))
+            sys.stdout.flush()
+        
         while True:
             ch = sys.stdin.read(1)
             

@@ -221,7 +221,11 @@ def orchestrate(goal: str, engine: str = None, project_dir: str = ".", interacti
     )
     
     if questions_result["status"] != "✅ SUCCESS":
-        spinner.stop(False, "Questionnaire failed — proceeding with assumptions")
+        spinner.stop(False, "Questionnaire failed")
+        TUI.warn("Clarification phase failed.")
+        choice = TUI.prompt("Continue without clarifications? (y/n)")
+        if choice and choice.lower() not in ('y', 'yes'):
+            return {"error": "User chose to stop after questionnaire failure"}
         clarified_requirements = f"Goal: {goal}\n(No clarifications — building based on goal alone)"
     else:
         spinner.stop(True, "Questions ready")
@@ -249,7 +253,25 @@ def orchestrate(goal: str, engine: str = None, project_dir: str = ".", interacti
     
     if plan_result["status"] != "✅ SUCCESS":
         spinner.stop(False, "Planner failed")
-        return {"error": "Planner failed", "details": plan_result}
+        TUI.error("Planning phase failed. Can not continue without a plan.")
+        retry = TUI.prompt("Retry planning? (y/n)")
+        if retry and retry.lower() in ('y', 'yes'):
+            # Retry once
+            spinner = Spinner("Retrying planner").start()
+            plan_result = dispatch_agent(
+                "planner",
+                f"RETRY: Design a complete implementation plan for:\n\nGOAL:\n{goal}\n\nCLARIFIED REQUIREMENTS:\n{clarified_requirements}",
+                context="Previous attempt failed. Design architecture and tasks. Be specific.",
+                engine_name=engine,
+                config=config,
+                workspace=workspace,
+            )
+            if plan_result["status"] != "✅ SUCCESS":
+                spinner.stop(False, "Planner failed again")
+                return {"error": "Planner failed twice", "details": plan_result}
+            spinner.stop(True, "Plan ready on retry")
+        else:
+            return {"error": "Planner failed, user chose not to retry", "details": plan_result}
     
     spinner.stop(True, "Plan ready")
     TUI.info("Implementation plan designed")
