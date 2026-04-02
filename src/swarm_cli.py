@@ -369,7 +369,7 @@ LOADING = [
 ]
 
 def loading_animation(timeout=500):
-    """Yield a spinner frame and witty phrase periodically"""
+    """Yield a spinner frame and witty phrase periodically. Pure local — no engine calls."""
     frames = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"]
     phrase_idx = 0
     frame_idx = 0
@@ -381,7 +381,7 @@ def loading_animation(timeout=500):
         phrase = LOADING[phrase_idx % len(LOADING)]
         elapsed = int(time.time() - start)
         
-        sys.stdout.write(f"\r  {C.t(C.CYN, frame)} {phrase} {C.t(C.D, f'({elapsed}s)')}")
+        sys.stdout.write(f"\r  {C.t(C.CYN, frame)} {phrase} {C.t(C.D, f'({elapsed}s)')}\033[K")
         sys.stdout.flush()
         
         frame_idx += 1
@@ -392,7 +392,6 @@ def loading_animation(timeout=500):
         yield
         time.sleep(0.1)
     
-    # Clear loading line
     sys.stdout.write(f"\r\033[K")
     sys.stdout.flush()
 
