@@ -46,6 +46,12 @@ def clean_input(prompt=""):
     
     try:
         tty.setraw(fd)
+    except termios.error:
+        # Terminal state corrupted — fall back to regular input
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+        return input(prompt)
+    
+    try:
         
         while True:
             ch = sys.stdin.read(1)
@@ -510,12 +516,6 @@ def main():
     if memory_file.exists():
         try: messages = json.loads(memory_file.read_text())
         except: pass
-    
-    # Update check
-    new_ver = check_update()
-    if new_ver:
-        print(f"\n  {C.t(C.YLW,f'⚠ Update available: v{VERSION} → v{new_ver}')}")
-        print(f"  {C.t(C.D,'Run: cd ~/.swarm && git pull')}\n")
     
     # Banner
     print(f"""

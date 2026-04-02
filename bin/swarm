@@ -63,11 +63,18 @@ function checkForUpdates(currentVersion) {
           const remotePkg = JSON.parse(data);
           const remoteVersion = remotePkg.version;
           
-          if (remoteVersion !== currentVersion) {
-            console.log(`\n  ${c.yellow}⚠  Update available: v${currentVersion} → v${remoteVersion}${c.reset}`);
-            console.log(`  ${c.dim}Run: cd ~/.swarm && git pull${c.reset}\n`);
+          // Compare versions — only return if remote is newer
+          const local = currentVersion.split('.').map(Number);
+          const remote = remoteVersion.split('.').map(Number);
+          const isNewer = remote[0] > local[0] || 
+            (remote[0] === local[0] && remote[1] > local[1]) ||
+            (remote[0] === local[0] && remote[1] === local[1] && remote[2] > local[2]);
+          
+          if (isNewer) {
+            resolve(remoteVersion);
+          } else {
+            resolve(null);
           }
-          resolve();
         } catch {
           resolve(); // Silent fail
         }
@@ -227,10 +234,6 @@ async function main() {
       console.error(`${c.red}Error: Python 3 is required but not found.${c.reset}`);
       process.exit(1);
     }
-    
-    // Check for updates (non-blocking, shows before CLI starts)
-    const currentVersion = getVersion();
-    await checkForUpdates(currentVersion);
     
     const cliPath = join(SWARM_ROOT, 'src', 'swarm_cli.py');
     if (existsSync(cliPath)) {
