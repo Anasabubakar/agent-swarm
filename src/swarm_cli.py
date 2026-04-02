@@ -377,8 +377,31 @@ def loading_animation(timeout=500):
     sys.stdout.flush()
 
 
+def run_cmd_list(cmd_parts, timeout=500):
+    """Run a command as a list (no shell) with loading animation and timeout"""
+    try:
+        proc = subprocess.Popen(
+            cmd_parts,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, cwd=CWD
+        )
+        for _ in loading_animation(timeout):
+            if proc.poll() is not None:
+                break
+            time.sleep(0.1)
+        if proc.poll() is None:
+            proc.kill()
+            print(f"\n  {C.t(C.YLW, 'Taking too long. Killed.')}\n")
+            return
+        out = proc.stdout.read()
+        err = proc.stderr.read()
+        if out: print(f"\n{out}")
+        if err: print(f"  {C.t(C.RED, err.strip())}")
+    except Exception as e:
+        print(f"\n  {C.t(C.RED, str(e))}\n")
+
 def run_cmd(command, timeout=500):
-    """Run a command with loading animation and timeout"""
+    """Run a shell command with loading animation and timeout"""
     try:
         proc = subprocess.Popen(
             command, shell=True, 
@@ -727,14 +750,22 @@ def main():
                 # Route question to connected AI engine (non-interactive mode)
                 if engine == "gemini":
                     model_flag = f"-m {model}" if model else ""
-                    run_cmd(f'gemini -p {model_flag} "{text}"')
+                    cmd_parts = ["gemini", "-p"]
+                    if model_flag:
+                        cmd_parts.extend(model_flag.split())
+                    cmd_parts.append(text)
+                    run_cmd_list(cmd_parts)
                 elif engine in ("kilo", "kilocode"):
                     model_flag = f"-m {model}" if model else ""
-                    run_cmd(f'kilo run --auto {model_flag} "{text}"')
+                    cmd_parts = ["kilo", "run", "--auto"]
+                    if model_flag:
+                        cmd_parts.extend(model_flag.split())
+                    cmd_parts.append(text)
+                    run_cmd_list(cmd_parts)
                 elif engine == "codex":
-                    run_cmd(f'codex exec "{text}"')
+                    run_cmd_list(["codex", "exec", text])
                 elif engine == "claude":
-                    run_cmd(f'claude -p "{text}"')
+                    run_cmd_list(["claude", "-p", text])
                 elif engine == "opencode":
                     run_cmd(f'opencode run "{text}"')
                 else:

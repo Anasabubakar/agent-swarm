@@ -122,8 +122,12 @@ class GeminiCLIEngine(BaseEngine):
     @classmethod
     def build_command(cls, system_prompt: str, task: str) -> list:
         # Gemini uses -p for non-interactive prompt
-        # Combine system prompt + task into one prompt
+        # Save prompt to file to avoid shell escaping issues
+        import tempfile
+        prompt_file = os.path.join(tempfile.gettempdir(), f"swarm_prompt_{os.getpid()}.txt")
         full_prompt = f"{system_prompt}\n\n---\n\nYour task: {task}\n\nComplete the task and return your results."
+        with open(prompt_file, 'w') as f:
+            f.write(full_prompt)
         return ["gemini", "-p", full_prompt]
 
 
