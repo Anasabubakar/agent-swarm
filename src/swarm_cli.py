@@ -8,16 +8,16 @@
   ║  ███████║╚███╔███╔╝██║  ██║██║  ██║██║ ╚═╝ ██║║
   ║  ╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝║
   ║  AI Assistant + Agent Swarm                      ║
-  ║  by Anas Abubakar • v1.0.5                       ║
+  ║  by Anas Abubakar • v1.0.10                      ║
   ╚════════════════════════════════════════╝
 """
 
-import sys, os, json, subprocess, shutil, random
+import sys, os, json, subprocess, shutil, random, termios, tty
 from pathlib import Path
 from datetime import datetime
 
 SWARM_ROOT = Path(os.environ.get("SWARM_ROOT", Path(__file__).parent.parent))
-VERSION = "1.0.5"
+VERSION = "1.0.10"
 CWD = os.getcwd()
 
 # Reset terminal state on startup (clean up any escape codes from previous sessions)

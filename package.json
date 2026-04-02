@@ -1,6 +1,6 @@
 {
   "name": "@anasabubakar/swarm",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Agent Swarm — Engine-agnostic multi-agent orchestration. One command, 245 agents.",
   "main": "swarm.js",
   "bin": {
@@ -41,6 +41,9 @@
     "engines/",
     "core/",
     "memory-system/",
+    "orchestrator.py",
+    "swarm.sh",
+    "install.sh",
     "swarm.config.json",
     "README.md",
     "LICENSE"
