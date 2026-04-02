@@ -1,6 +1,6 @@
 {
   "name": "@anasabubakar/swarm",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Agent Swarm — Engine-agnostic multi-agent orchestration. One command, 245 agents.",
   "main": "swarm.js",
   "bin": {

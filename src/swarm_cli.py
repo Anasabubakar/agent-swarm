@@ -12,7 +12,7 @@
   ╚════════════════════════════════════════╝
 """
 
-import sys, os, json, subprocess, shutil
+import sys, os, json, subprocess, shutil, random
 from pathlib import Path
 from datetime import datetime
 
@@ -24,7 +24,128 @@ CWD = os.getcwd()
 sys.stdout.write('\033[0m\033[?25h')  # Reset colors, show cursor
 sys.stdout.flush()
 
-import random
+# ═══════════════════════════════════════
+# CLEAN INPUT WITH PROPER KEY HANDLING
+# ═══════════════════════════════════════
+
+def clean_input(prompt=""):
+    """
+    Input that properly handles backspace and arrow keys.
+    Left/right arrows move cursor, backspace deletes.
+    No dropdown, no fancy stuff — just works.
+    """
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+    
+    buf = []       # Characters before cursor
+    after = []     # Characters after cursor (for right-arrow support)
+    
+    sys.stdout.write(prompt)
+    sys.stdout.flush()
+    
+    try:
+        tty.setraw(fd)
+        
+        while True:
+            ch = sys.stdin.read(1)
+            
+            # Enter
+            if ch in ('\r', '\n'):
+                sys.stdout.write('\r\n')
+                sys.stdout.flush()
+                return ''.join(buf + after)
+            
+            # CTRL+C
+            if ch == '\x03':
+                sys.stdout.write('\r\n')
+                sys.stdout.flush()
+                raise KeyboardInterrupt
+            
+            # CTRL+D
+            if ch == '\x04':
+                sys.stdout.write('\r\n')
+                sys.stdout.flush()
+                raise EOFError
+            
+            # Escape sequence (arrow keys)
+            if ch == '\x1b':
+                ch2 = sys.stdin.read(1)
+                if ch2 == '[':
+                    ch3 = sys.stdin.read(1)
+                    if ch3 == 'D':  # Left arrow
+                        if buf:
+                            after.append(buf.pop())
+                            sys.stdout.write('\x1b[D')  # Move cursor left
+                            sys.stdout.flush()
+                    elif ch3 == 'C':  # Right arrow
+                        if after:
+                            buf.append(after.pop())
+                            sys.stdout.write('\x1b[C')  # Move cursor right
+                            sys.stdout.flush()
+                    elif ch3 == 'A':  # Up arrow — ignore
+                        pass
+                    elif ch3 == 'B':  # Down arrow — ignore
+                        pass
+                # Ignore other escape sequences
+                continue
+            
+            # Backspace / Delete
+            if ch in ('\x7f', '\b'):
+                if buf:
+                    buf.pop()
+                    # Move cursor back, write space, move back again
+                    sys.stdout.write('\b \b')
+                    # If there are chars after cursor, redraw them
+                    if after:
+                        sys.stdout.write(''.join(after))
+                        sys.stdout.write(' ' * len(after))
+                        sys.stdout.write(f'\x1b[{len(after)}D')  # Move cursor back
+                    sys.stdout.flush()
+                continue
+            
+            # CTRL+A — move to beginning
+            if ch == '\x01':
+                if buf:
+                    sys.stdout.write(f'\x1b[{len(buf)}D')  # Move left by len(buf)
+                    after = buf[::-1] + after
+                    buf = []
+                    sys.stdout.flush()
+                continue
+            
+            # CTRL+E — move to end
+            if ch == '\x05':
+                if after:
+                    sys.stdout.write(f'\x1b[{len(after)}C')  # Move right by len(after)
+                    buf = buf + after[::-1]
+                    after = []
+                    sys.stdout.flush()
+                continue
+            
+            # CTRL+U — clear line
+            if ch == '\x15':
+                total = len(buf) + len(after)
+                sys.stdout.write(f'\x1b[{total}D')  # Move to start
+                sys.stdout.write(' ' * total)         # Clear
+                sys.stdout.write(f'\x1b[{total}D')    # Move back to start
+                buf = []
+                after = []
+                sys.stdout.flush()
+                continue
+            
+            # Regular character
+            if ord(ch) >= 32:  # Printable characters only
+                buf.append(ch)
+                if after:
+                    # Insert in middle — write char, then redraw after
+                    sys.stdout.write(ch)
+                    sys.stdout.write(''.join(reversed(after)))
+                    sys.stdout.write(f'\x1b[{len(after)}D')  # Move cursor back to insertion point
+                else:
+                    sys.stdout.write(ch)
+                sys.stdout.flush()
+    
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
 WELCOME = [
     "Right then. Let's get to work.",
@@ -418,7 +539,7 @@ def main():
     # Main loop — just use regular input()
     while True:
         try:
-            text = input(f"  {C.t(C.GRN,'▸')} ").strip()
+            text = clean_input(f"  {C.t(C.GRN,'▸')} ").strip()
             if not text: continue
             
             # Show command list when user types just /
