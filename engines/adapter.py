@@ -122,9 +122,9 @@ class GeminiCLIEngine(BaseEngine):
     @classmethod
     def build_command(cls, system_prompt: str, task: str) -> list:
         # Gemini -p takes prompt as argument, but long prompts break
-        # Use --model flag if available, and keep prompt short
-        full_prompt = f"{task}\n\nRole: {system_prompt[:200]}"
-        return ["gemini", "--skip-git-repo-check", "-p", full_prompt]
+        # Use -p for headless mode, combine system prompt with task
+        full_prompt = f"{system_prompt}\n\n---\n\nYour task: {task}\n\nComplete the task and return your results."
+        return ["gemini", "-p", full_prompt]
     
     @classmethod
     def run(cls, agent_file: str, task: str, output_dir: str = ".") -> dict:
@@ -140,7 +140,7 @@ class GeminiCLIEngine(BaseEngine):
         import subprocess
         try:
             result = subprocess.run(
-                ["gemini", "--skip-git-repo-check", "-p", full_prompt],
+                ["gemini", "-p", full_prompt],
                 capture_output=True,
                 text=True,
                 timeout=cls.timeout,
