@@ -22,6 +22,10 @@ def _get_version():
 VERSION = _get_version()
 CWD = os.getcwd()
 
+# Use home directory for swarm data to avoid permission issues on Windows/WSL
+SWARM_DIR = os.path.expanduser("~/.swarm")
+os.makedirs(SWARM_DIR, exist_ok=True)
+
 # Reset terminal state on startup (clean up any escape codes from previous sessions)
 sys.stdout.write('\033[0m\033[?25h')  # Reset colors, show cursor
 sys.stdout.flush()
@@ -575,7 +579,7 @@ def handle_slash(text):
                 engine = model_to_engine[name]
                 model = name
                 pref = {"engine": engine, "model": model}
-                Path(CWD).joinpath(".swarm-model.json").write_text(json.dumps(pref))
+                Path(SWARM_DIR).joinpath(".swarm-model.json").write_text(json.dumps(pref))
                 print(f"  {C.t(C.GRN, '✓')} Model: {C.t(C.B, name)} ({eng}) - {desc}\n")
             else:
                 print(f"  {C.t(C.RED, 'Invalid number')}\n")
@@ -634,7 +638,7 @@ def handle_slash(text):
             model = arg
             # Save model preference
             pref = {"engine": engine, "model": model}
-            Path(CWD).joinpath(".swarm-model.json").write_text(json.dumps(pref))
+            Path(SWARM_DIR).joinpath(".swarm-model.json").write_text(json.dumps(pref))
             print(f"  {C.t(C.GRN, '✓')} Model: {C.t(C.B, arg)} ({engine})\n")
         else:
             print(f"  {C.t(C.RED, f'Unknown: {arg}')}  /model list to see options\n")
