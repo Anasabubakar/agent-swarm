@@ -118,16 +118,33 @@ def clean_input(prompt=""):
         # Detect paste: check if data is already buffered when we enter raw mode
         import select as _sel
         paste_buf = []
-        r, _, _ = _sel.select([fd], [], [], 0.05)
+        
+        # Wait a bit longer to catch multi-part pastes (some terminals send paste in chunks)
+        r, _, _ = _sel.select([fd], [], [], 0.1)
         if r:
             # Data waiting = user pasted before pressing Enter
-            raw = os.read(fd, 4096)
+            raw = b''
+            while True:
+                try:
+                    # Non-blocking read - get whatever is available
+                    chunk = os.read(fd, 8192)
+                    if not chunk:
+                        break
+                    raw += chunk
+                    # If we got a chunk but no more is coming, break after a short wait
+                    if len(chunk) < 8192:
+                        time.sleep(0.05)
+                        if not _sel.select([fd], [], [], 0.01)[0]:
+                            break
+                except:
+                    break
+            
             text = raw.decode('utf-8', errors='replace')
-            # Strip trailing newlines/carriage returns (the Enter key)
-            text = text.rstrip('\r\n')
-            # Handle internal newlines as spaces
-            text = text.replace('\n', ' ').replace('\r', '')
-            # Show the pasted text and allow editing
+            # Strip ALL whitespace including newlines - prevent auto-submit on paste
+            text = ' '.join(text.split())  # This replaces all newlines/tabs with spaces
+            text = text.strip()
+            
+            # Show the pasted text and allow editing (don't auto-submit!)
             for ch in text:
                 if ord(ch) >= 32:
                     buf.append(ch)
