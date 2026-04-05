@@ -9,6 +9,15 @@ import tty, termios
 from pathlib import Path
 from datetime import datetime
 
+# Cross-platform terminal support
+PLATFORM_TERMINAL = "unix"
+if sys.platform == "win32":
+    PLATFORM_TERMINAL = "windows"
+    try:
+        import msvcrt
+    except ImportError:
+        pass  # Will fall back to regular input
+
 SWARM_ROOT = Path(os.environ.get("SWARM_ROOT", Path(__file__).parent.parent))
 
 # Auto-sync version from package.json
@@ -84,8 +93,24 @@ def confirm(question, default=False):
 def clean_input(prompt=""):
     """
     Proper text input with backspace, delete, and arrow keys.
+    Falls back to regular input on Windows where termios doesn't work.
     """
+    # On Windows, use regular input() since termios isn't available
+    if PLATFORM_TERMINAL == "windows":
+        try:
+            return input(prompt)
+        except (EOFError, KeyboardInterrupt):
+            return ""
+    
     fd = sys.stdin.fileno()
+    
+    # Check if we have a proper TTY - if not, use regular input
+    try:
+        if not os.isatty(fd):
+            return input(prompt)
+    except:
+        return input(prompt)
+    
     old = termios.tcgetattr(fd)
     
     buf = []    # Characters before cursor
