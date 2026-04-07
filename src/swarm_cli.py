@@ -165,17 +165,35 @@ def clean_input(prompt=""):
                     break
             
             text = raw.decode('utf-8', errors='replace')
-            # Strip ALL whitespace including newlines - prevent auto-submit on paste
-            text = ' '.join(text.split())  # This replaces all newlines/tabs with spaces
+            # Strip leading/trailing whitespace but preserve internal structure
             text = text.strip()
             
-            # Show the pasted text and allow editing (don't auto-submit!)
+            # Count lines BEFORE normalizing whitespace
+            lines = text.split('\n')
+            line_count = len(lines)
+            char_count = len(text)
+            
+            # Determine display format based on line count
+            if line_count >= 5:
+                display = f"[ {line_count} Lines ]"
+                # For editing: normalize to single spaces (like before)
+                text = ' '.join(text.split())
+            else:
+                display = f"[ {char_count} Chars ]"
+                # For editing: normalize to single spaces
+                text = ' '.join(text.split())
+            
+            # Show the count/bracket instead of full text, then add actual text for editing
+            sys.stdout.write(display)
+            sys.stdout.flush()
+            
+            # Add actual text to buffer for editing (but don't display all of it)
             for ch in text:
                 if ord(ch) >= 32:
                     buf.append(ch)
-            # Redraw
-            sys.stdout.write(''.join(buf))
-            sys.stdout.flush()
+            
+            # Move cursor to start of bracket and to end of text (hidden)
+            # User sees bracket, can backspace/edit the actual text
         
         while True:
             ch = sys.stdin.read(1)
