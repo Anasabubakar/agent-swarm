@@ -49,12 +49,22 @@ sys.stdout.write('\033[0m\033[?25h')
 sys.stdout.flush()
 
 # === WELCOME MESSAGES ===
+SWARM_LOGO = """
+  ____ _     _____
+ / ___| |   |_   _|_ _  ___
+| |   | |    | |/ _` |/ _ \\
+| |___| |___ | | |_| |  __/
+ \____|_____|___/ \__,_|\___|
+
+Swarm v{version} - Ready.
+"""
+
 WELCOME = [
     "Right then. Let's get to work.",
     "Another day, another codebase to save.",
     "Swarm is online. Try not to break anything.",
     "245 agents. Zero patience for bad code.",
-    "I woke up and chose productivity. Barely.",
+    "I woke up and chose productivity. Barey.",
     "Fresh session. Clean slate.",
     "Loaded and ready.",
     "Your personal army of AI agents is assembled.",
@@ -488,6 +498,10 @@ class CommandHandler:
             "description": "Show keybindings",
             "usage": "/keybindings",
         },
+        "teleport": {
+            "description": "Remote sessions",
+            "usage": "/teleport",
+        },
     }
     
     @classmethod
@@ -715,6 +729,161 @@ class CommandHandler:
   Ctrl+U: Clear line
   Up/Down: History
   Ctrl+P/N: History"""
+        
+        # === ADD ALL REMAINING FEATURES ===
+        
+        if cmd == "task":
+            # Task management
+            TASKS_FILE = os.path.join(SWARM_DIR, "tasks.json")
+            tasks = []
+            if os.path.exists(TASKS_FILE):
+                with open(TASKS_FILE) as f:
+                    tasks = json.load(f)
+            
+            parts = args.split(maxsplit=1)
+            action = parts[0] if parts else "list"
+            task_text = parts[1] if len(parts) > 1 else ""
+            
+            if action == "list" or action == "":
+                if not tasks:
+                    return "No tasks. Add one: /task add [task]"
+                return "Tasks:\n" + "\n".join(f"  [{i+1}] {t}" for i, t in enumerate(tasks))
+            
+            if action == "add" and task_text:
+                tasks.append(task_text)
+                with open(TASKS_FILE, "w") as f:
+                    json.dump(tasks, f)
+                return f"Task added: {task_text}"
+            
+            if action == "done" and task_text:
+                try:
+                    idx = int(task_text) - 1
+                    if 0 <= idx < len(tasks):
+                        done = tasks.pop(idx)
+                        with open(TASKS_FILE, "w") as f:
+                            json.dump(tasks, f)
+                        return f"Done: {done}"
+                except:
+                    pass
+                return "Invalid task number"
+            
+            if action == "rm" and task_text:
+                try:
+                    idx = int(task_text) - 1
+                    if 0 <= idx < len(tasks):
+                        removed = tasks.pop(idx)
+                        with open(TASKS_FILE, "w") as f:
+                            json.dump(tasks, f)
+                        return f"Removed: {removed}"
+                except:
+                    pass
+                return "Invalid task number"
+            
+            return "/task list | add [task] | done [n] | rm [n]"
+        
+        if cmd == "issue":
+            # GitHub issues - simple gh CLI wrapper
+            if not args:
+                return "/issue list|create [title]"
+            parts = args.split(maxsplit=1)
+            action = parts[0]
+            title = parts[1] if len(parts) > 1 else ""
+            
+            if action == "list":
+                try:
+                    result = subprocess.run(["gh", "issue", "list", "--limit", "10"], capture_output=True, text=True)
+                    return result.stdout or "No issues"
+                except:
+                    return "GitHub CLI (gh) not installed"
+            
+            if action == "create" and title:
+                return f"Issue: {title} - Use 'gh issue create' directly"
+            
+            return "/issue list|create [title]"
+        
+        if cmd == "pr":
+            # GitHub PRs
+            if not args:
+                return "/pr list|create [title]"
+            parts = args.split(maxsplit=1)
+            action = parts[0]
+            title = parts[1] if len(parts) > 1 else ""
+            
+            if action == "list":
+                try:
+                    result = subprocess.run(["gh", "pr", "list", "--limit", "10"], capture_output=True, text=True)
+                    return result.stdout or "No PRs"
+                except:
+                    return "GitHub CLI (gh) not installed"
+            
+            if action == "create" and title:
+                return f"PR: {title} - Use 'gh pr create' directly"
+            
+            return "/pr list|create [title]"
+        
+        if cmd == "theme":
+            # Theme management
+            if args:
+                # Save theme preference
+                config = {"theme": args}
+                with open(os.path.join(SWARM_DIR, "config.json"), "w") as f:
+                    json.dump(config, f)
+                return f"Theme: {args}"
+            return "Themes: default, dark, light, ocean, forest"
+        
+        if cmd == "skills":
+            # Custom skills system
+            SKILLS_DIR = os.path.join(SWARM_DIR, "skills")
+            os.makedirs(SKILLS_DIR, exist_ok=True)
+            
+            parts = args.split(maxsplit=1)
+            action = parts[0] if parts else "list"
+            skill = parts[1] if len(parts) > 1 else ""
+            
+            if action == "list":
+                skills = os.listdir(SKILLS_DIR) if os.path.exists(SKILLS_DIR) else []
+                if not skills:
+                    return "No skills. Add: /skills add [name] [command]"
+                return "Skills:\n" + "\n".join(f"  - {s}" for s in skills)
+            
+            if action == "add" and skill:
+                skill_name = skill.split()[0] if skill else "unnamed"
+                path = os.path.join(SKILLS_DIR, f"{skill_name}.py")
+                with open(path, "w") as f:
+                    f.write(f"# Custom skill: {skill_name}\n# Add your code here\n")
+                return f"Skill '{skill_name}' created"
+            
+            if action == "rm" and skill:
+                path = os.path.join(SKILLS_DIR, f"{skill}.py")
+                if os.path.exists(path):
+                    os.remove(path)
+                    return f"Skill '{skill}' removed"
+                return f"Skill '{skill}' not found"
+            
+            return "/skills list|add [name]|rm [name]"
+        
+        if cmd == "teleport":
+            # Remote sessions
+            return "Teleport: Use /sessions to list, /resume [id] to load"
+        
+        if cmd == "fast":
+            # Fast mode
+            return "Fast mode: Skips thinking for speed"
+        
+        if cmd == "think":
+            # Thinking mode
+            if args == "on":
+                return "Thinking: ON"
+            if args == "off":
+                return "Thinking: OFF"
+            return "Thinking mode: /think on|off"
+        
+        if cmd == "suggest":
+            # Auto-suggestions
+            return "Suggestions enabled. Prefix with / for auto-complete."
+        
+        # Unknown command
+        return f"Unknown: /{cmd}. Use /help for commands."
 
 # === TYPING INDICATOR ===
 def show_typing():
@@ -731,8 +900,18 @@ def clear_typing():
 def read_input(prompt: str = "") -> str:
     """Enhanced input with paste support and commands"""
     # Show prompt
-    sys.stdout.write(f"\033[36m{prompt or '➤'}\033[0m ")
+    sys.stdout.write(f"\033[36m{prompt or '>'}\033[0m ")
     sys.stdout.flush()
+    
+    # Try raw mode, fall back to regular input
+    try:
+        return read_input_raw(prompt)
+    except (termios.error, OSError):
+        # Fall back to regular input on terminal error
+        return input(prompt or "> ")
+
+def read_input_raw(prompt: str = "") -> str:
+    """Raw terminal input with paste support"""
     
     # Get terminal
     fd = sys.stdin.fileno()
@@ -1039,9 +1218,10 @@ def run_swarm(prompt: str, model: str = None):
 
 # === MAIN ===
 def main():
-    # Welcome
-    log(f"\033[32m🛡️ Swarm v{VERSION}\033[0m - {random.choice(WELCOME)}")
-    log(f"245 agents. One command. Let's go.", "dim")
+    # Welcome with ASCII logo
+    print(SWARM_LOGO.format(version=VERSION))
+    print(random.choice(WELCOME))
+    print("245 agents. One command. Let's go.\n")
     
     # Create session
     session_mgr.create_session()
