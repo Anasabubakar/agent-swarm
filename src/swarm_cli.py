@@ -737,23 +737,19 @@ class CommandHandler:
             log("\n\033[2mSession ended.\033[0m", "dim")
             sys.exit(0)
         
-        if cmd == "task":
-            parts = args.split()
-            return "/task list|add|done|rm [task] - tasks coming soon"
-        
-        if cmd == "issue":
-            return "/issue list|create - GitHub issues coming soon"
-        
-        if cmd == "pr":
-            return "/pr list|create - GitHub PRs coming soon"
-        
         if cmd == "theme":
+            # Theme - set colors
             if args:
-                return f"Theme set to: {args}"
-            return "Available themes: default, dark, light"
-        
-        if cmd == "skills":
-            return "/skills list|add|rm - custom skills coming soon"
+                config_path = os.path.join(SWARM_DIR, "config.json")
+                config = {}
+                if os.path.exists(config_path):
+                    with open(config_path) as f:
+                        config = json.load(f)
+                config["theme"] = args
+                with open(config_path, "w") as f:
+                    json.dump(config, f)
+                return f"Theme: {args}"
+            return "Themes: default, dark, light, ocean, forest"
         
         if cmd == "keybindings":
             return """Keybindings:
