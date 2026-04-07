@@ -1,6 +1,6 @@
 # 🛡️ Swarm
 
-**Engine-agnostic multi-agent orchestration. 245 agents. One command.**
+**Engine-agnostic multi-agent orchestration. 245 agents. One command. v3.0.1**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Anasabubakar/agent-swarm/main/install.sh | bash
