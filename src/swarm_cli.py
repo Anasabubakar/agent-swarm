@@ -556,8 +556,24 @@ class CommandHandler:
         
         if cmd == "model":
             if args:
+                # Save model preference
+                config_path = os.path.join(SWARM_DIR, "config.json")
+                config = {}
+                if os.path.exists(config_path):
+                    with open(config_path) as f:
+                        config = json.load(f)
+                config["model"] = args
+                with open(config_path, "w") as f:
+                    json.dump(config, f)
                 return f"Model set to: {args}"
-            return "claude-sonnet-4-20250514"
+            # Show current model
+            config_path = os.path.join(SWARM_DIR, "config.json")
+            current = "claude-sonnet"
+            if os.path.exists(config_path):
+                with open(config_path) as f:
+                    config = json.load(f)
+                    current = config.get("model", "claude-sonnet")
+            return f"Current: {current}\nAvailable: claude-sonnet, claude-opus, gpt-4, gemini"
         
         if cmd == "compact":
             session_mgr.compact_history()
@@ -1051,6 +1067,16 @@ def get_model(name: str = None):
     return MODELS.get(name, MODELS["claude-sonnet"])
 
 # === SWARM CORE ===
+def get_current_model():
+    """Get the current or default model"""
+    config_path = os.path.join(SWARM_DIR, "config.json")
+    if os.path.exists(config_path):
+        with open(config_path) as f:
+            config = json.load(f)
+            model = config.get("model", "claude-sonnet")
+            return MODELS.get(model, MODELS["claude-sonnet"])
+    return MODELS["claude-sonnet"]
+
 def run_swarm(prompt: str, model: str = None):
     """Run swarm with prompt through any LLM API or CLI"""
     
@@ -1059,7 +1085,8 @@ def run_swarm(prompt: str, model: str = None):
     
     show_typing()
     
-    model = model or get_model()
+    # Use saved model or default
+    current_model = model or get_current_model()
     
     # Try Gemini CLI first (most common for swarm users)
     try:
