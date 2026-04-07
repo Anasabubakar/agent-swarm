@@ -39,6 +39,10 @@ SESSIONS_DIR = os.path.join(SWARM_DIR, "sessions")
 os.makedirs(SESSIONS_DIR, exist_ok=True)
 MEMORY_DIR = os.path.join(SWARM_DIR, "memory")
 os.makedirs(MEMORY_DIR, exist_ok=True)
+MCP_DIR = os.path.join(SWARM_DIR, "mcp-servers")
+os.makedirs(MCP_DIR, exist_ok=True)
+TOOLS_DIR = os.path.join(SWARM_DIR, "tools")
+os.makedirs(TOOLS_DIR, exist_ok=True)
 
 # Terminal reset
 sys.stdout.write('\033[0m\033[?25h')
@@ -175,6 +179,198 @@ class SessionManager:
 
 session_mgr = SessionManager()
 
+# === MCP SERVER MANAGEMENT ===
+class MCPServer:
+    """MCP Server management like Claude Code"""
+    
+    def __init__(self):
+        self.servers = {}
+        self.load_servers()
+    
+    def load_servers(self):
+        """Load configured MCP servers"""
+        config_path = os.path.join(MCP_DIR, "servers.json")
+        if os.path.exists(config_path):
+            with open(config_path) as f:
+                self.servers = json.load(f)
+    
+    def save_servers(self):
+        """Save MCP server config"""
+        config_path = os.path.join(MCP_DIR, "servers.json")
+        with open(config_path, "w") as f:
+            json.dump(self.servers, f, indent=2)
+    
+    def add_server(self, name: str, config: dict) -> bool:
+        """Add MCP server"""
+        self.servers[name] = config
+        self.save_servers()
+        return True
+    
+    def remove_server(self, name: str) -> bool:
+        """Remove MCP server"""
+        if name in self.servers:
+            del self.servers[name]
+            self.save_servers()
+            return True
+        return False
+    
+    def list_servers(self) -> List[str]:
+        """List MCP servers"""
+        return list(self.servers.keys())
+    
+    async def call_tool(self, server: str, tool: str, args: dict = None):
+        """Call MCP server tool"""
+        if server not in self.servers:
+            return {"error": f"Server {server} not found"}
+        
+        config = self.servers[server]
+        # TODO: Implement actual MCP stdio/SSE call
+        return {"result": f"Would call {server}.{tool}({args})"}
+    
+    def get_tools(self) -> List[dict]:
+        """Get all available tools from MCP servers"""
+        tools = []
+        for name, config in self.servers.items():
+            tools.append({
+                "name": f"mcp_{name}",
+                "description": f"MCP server: {name}",
+                "server": name,
+            })
+        return tools
+
+mcp_server = MCPServer()
+
+# === TOOL MANAGEMENT ===
+class ToolManager:
+    """Tool management like Claude Code"""
+    
+    def __init__(self):
+        self.tools = self.get_builtin_tools()
+        self.load_custom_tools()
+    
+    def get_builtin_tools(self) -> List[dict]:
+        """Get built-in tools"""
+        return [
+            {"name": "Read", "description": "Read file contents", "params": ["path"]},
+            {"name": "Edit", "description": "Edit a file", "params": ["path", "oldText", "newText"]},
+            {"name": "Write", "description": "Write file contents", "params": ["path", "content"]},
+            {"name": "Bash", "description": "Run shell command", "params": ["command"]},
+            {"name": "Glob", "description": "Find files by pattern", "params": ["pattern"]},
+            {"name": "Grep", "description": "Search in files", "params": ["pattern", "path"]},
+            {"name": "WebFetch", "description": "Fetch URL content", "params": ["url"]},
+            {"name": "WebSearch", "description": "Search the web", "params": ["query"]},
+        ]
+    
+    def load_custom_tools(self):
+        """Load custom tools from tools directory"""
+        for f in os.listdir(TOOLS_DIR):
+            if f.endswith(".json"):
+                with open(os.path.join(TOOLS_DIR, f)) as fp:
+                    tool = json.load(fp)
+                    self.tools.append(tool)
+    
+    def list_tools(self) -> List[str]:
+        """List available tools"""
+        return [t["name"] for t in self.tools]
+
+tool_mgr = ToolManager()
+
+# === PERMISSIONS ===
+class PermissionManager:
+    """Tool permissions like Claude Code"""
+    
+    def __init__(self):
+        self.allowed = set()
+        self.denied = set()
+        self.load()
+    
+    def load(self):
+        """Load permissions"""
+        path = os.path.join(SWARM_DIR, "permissions.json")
+        if os.path.exists(path):
+            with open(path) as f:
+                data = json.load(f)
+                self.allowed = set(data.get("allowed", []))
+                self.denied = set(data.get("denied", []))
+    
+    def save(self):
+        """Save permissions"""
+        path = os.path.join(SWARM_DIR, "permissions.json")
+        with open(path, "w") as f:
+            json.dump({
+                "allowed": list(self.allowed),
+                "denied": list(self.denied)
+            }, f, indent=2)
+    
+    def allow(self, tool: str):
+        """Allow tool"""
+        self.allowed.add(tool)
+        self.save()
+    
+    def deny(self, tool: str):
+        """Deny tool"""
+        self.denied.add(tool)
+        self.save()
+    
+    def is_allowed(self, tool: str) -> bool:
+        """Check if tool is allowed"""
+        if tool in self.denied:
+            return False
+        if tool in self.allowed:
+            return True
+        return True  # Default allow
+
+# === AGENT MANAGEMENT ===
+class AgentManager:
+    """Agent management like Claude Code"""
+    
+    def __init__(self):
+        self.agents = self.get_builtin_agents()
+        self.load_agents()
+    
+    def get_builtin_agents(self) -> dict:
+        """Get built-in agents"""
+        return {
+            "general": {
+                "name": "General",
+                "model": "claude-sonnet-4-20250514",
+                "description": "General purpose assistant"
+            },
+            "coder": {
+                "name": "Coder",
+                "model": "claude-opus-4-20250514", 
+                "description": "Code specialist"
+            },
+            "writer": {
+                "name": "Writer", 
+                "model": "claude-sonnet-4-20250514",
+                "description": "Content writer"
+            },
+            "reviewer": {
+                "name": "Reviewer",
+                "model": "claude-opus-4-20250514",
+                "description": "Code reviewer"
+            },
+        }
+    
+    def load_agents(self):
+        """Load custom agents"""
+        agents_path = os.path.join(SWARM_DIR, "agents.json")
+        if os.path.exists(agents_path):
+            with open(agents_path) as f:
+                custom = json.load(f)
+                self.agents.update(custom)
+    
+    def list_agents(self) -> List[str]:
+        """List available agents"""
+        return list(self.agents.keys())
+    
+    def get_agent(self, name: str) -> dict:
+        """Get agent config"""
+        return self.agents.get(name, self.agents["general"])
+
+agent_mgr = AgentManager()
+
 # === COMMAND HANDLERS ===
 class CommandHandler:
     """Slash commands like Claude Code"""
@@ -218,7 +414,19 @@ class CommandHandler:
         },
         "mcp": {
             "description": "MCP servers",
-            "usage": "/mcp [list|add|remove] [server]",
+            "usage": "/mcp [list|add|remove|tools] [server]",
+        },
+        "tools": {
+            "description": "List available tools",
+            "usage": "/tools [tool]",
+        },
+        "allow": {
+            "description": "Allow tool",
+            "usage": "/allow [tool]",
+        },
+        "deny": {
+            "description": "Deny tool",
+            "usage": "/deny [tool]",
         },
         "git": {
             "description": "Git commands",
@@ -243,6 +451,10 @@ class CommandHandler:
         "btw": {
             "description": "Add comment",
             "usage": "/btw [comment]",
+        },
+        "agents": {
+            "description": "Manage agents",
+            "usage": "/agents [list|use|add] [name]",
         },
     }
     
@@ -349,7 +561,50 @@ class CommandHandler:
             return "/memory list | add [text]"
         
         if cmd == "mcp":
-            return "MCP servers: none configured (use /mcp add [server])"
+            parts = args.split()
+            if len(parts) == 0 or parts[0] == "list":
+                servers = mcp_server.list_servers()
+                if not servers:
+                    return "No MCP servers configured. Use /mcp add [name] [command]"
+                return "MCP Servers:\n" + "\n".join(f"  - {s}" for s in servers)
+            if parts[0] == "add" and len(parts) >= 2:
+                name = parts[1]
+                # Check for stdio config
+                config = {"type": "stdio", "command": " ".join(parts[2:]) if len(parts) > 2 else "echo"}
+                mcp_server.add_server(name, config)
+                return f"MCP server '{name}' added"
+            if parts[0] == "remove" and len(parts) >= 2:
+                name = parts[1]
+                if mcp_server.remove_server(name):
+                    return f"MCP server '{name}' removed"
+                return f"MCP server '{name}' not found"
+            if parts[0] == "tools":
+                tools = mcp_server.get_tools()
+                if not tools:
+                    return "No MCP tools available"
+                return "MCP Tools:\n" + "\n".join(f"  {t['name']}: {t['description']}" for t in tools)
+            return "/mcp list | add [name] [command] | remove [name] | tools"
+        
+        if cmd == "tools":
+            if args:
+                for t in tool_mgr.tools:
+                    if t["name"].lower() == args.lower():
+                        return f"{t['name']}: {t['description']}\nParams: {t.get('params', [])}"
+                return f"Tool '{args}' not found"
+            tools = tool_mgr.list_tools()
+            return f"Available tools ({len(tools)}):\n" + "\n".join(f"  - {t}" for t in tools)
+        
+        if cmd == "allow":
+            if args:
+                perm_mgr.allow(args)
+                return f"Tool '{args}' allowed"
+            return "Tool name required: /allow [tool]"
+        
+        if cmd == "deny":
+            if args:
+                perm_mgr.deny(args)
+                return f"Tool '{args}' denied"
+            return "Tool name required: /deny [tool]"
         
         if cmd == "config":
             key_val = args.split()
@@ -376,6 +631,23 @@ class CommandHandler:
             if args:
                 return f"💬 {args}"
             return "Add a comment"
+        
+        if cmd == "agents":
+            parts = args.split()
+            if len(parts) == 0 or parts[0] == "list":
+                agents = agent_mgr.list_agents()
+                return "Agents:\n" + "\n".join(f"  - {a}: {agent_mgr.get_agent(a).get('description', '')}" for a in agents)
+            if parts[0] == "use" and len(parts) >= 2:
+                name = parts[1]
+                if name in agent_mgr.list_agents():
+                    session_mgr.save_message("system", f"Using agent: {name}")
+                    return f"Switched to agent: {name}"
+                return f"Agent '{name}' not found"
+            if parts[0] == "add" and len(parts) >= 2:
+                name = parts[1]
+                # TODO: Add custom agent
+                return f"Agent '{name}' added"
+            return "/agents list | use [name] | add [name]"
         
         if cmd == "review":
             return "Code review mode - paste code to review"
