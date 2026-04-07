@@ -566,14 +566,33 @@ class CommandHandler:
                 with open(config_path, "w") as f:
                     json.dump(config, f)
                 return f"Model set to: {args}"
+            
+            # Detect installed CLI models
+            available = []
+            
+            # Check each CLI
+            for cli in ["claude", "kilo", "gemini", "codex", "cursor", "aider"]:
+                try:
+                    result = subprocess.run([cli, "--version"], capture_output=True, timeout=5)
+                    if result.returncode == 0:
+                        available.append(cli)
+                except:
+                    pass
+            
+            # Also check common model names
+            for m in ["claude-sonnet", "claude-opus", "gpt-4", "gemini"]:
+                if m not in available:
+                    available.append(m)
+            
             # Show current model
             config_path = os.path.join(SWARM_DIR, "config.json")
-            current = "claude-sonnet"
+            current = "kilocode"  # Default
             if os.path.exists(config_path):
                 with open(config_path) as f:
                     config = json.load(f)
-                    current = config.get("model", "claude-sonnet")
-            return f"Current: {current}\nAvailable: claude-sonnet, claude-opus, gpt-4, gemini"
+                    current = config.get("model", "kilocode")
+            
+            return f"Current: {current}\nAvailable: {', '.join(available)}\nUse: /model [name]"
         
         if cmd == "compact":
             session_mgr.compact_history()
@@ -1073,9 +1092,9 @@ def get_current_model():
     if os.path.exists(config_path):
         with open(config_path) as f:
             config = json.load(f)
-            model = config.get("model", "claude-sonnet")
-            return MODELS.get(model, MODELS["claude-sonnet"])
-    return MODELS["claude-sonnet"]
+            model = config.get("model", "kilocode")  # Default to kilocode
+            return model
+    return "kilocode"  # Default
 
 def run_swarm(prompt: str, model: str = None):
     """Run swarm with prompt through any LLM API or CLI"""
@@ -1088,7 +1107,22 @@ def run_swarm(prompt: str, model: str = None):
     # Use saved model or default
     current_model = model or get_current_model()
     
-    # Try Gemini CLI first (most common for swarm users)
+    # Try the saved CLI first
+    try:
+        result = subprocess.run(
+            [current_model, prompt],
+            capture_output=True,
+            text=True,
+            timeout=180,
+            shell=False
+        )
+        if result.returncode == 0 and result.stdout:
+            clear_typing()
+            return result.stdout
+    except:
+        pass
+    
+    # Try Claude CLI 
     try:
         result = subprocess.run(
             ["claude", prompt],
