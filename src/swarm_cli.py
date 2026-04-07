@@ -49,12 +49,11 @@ sys.stdout.write('\033[0m\033[?25h')
 sys.stdout.flush()
 
 # === WELCOME MESSAGES ===
-SWARM_LOGO = """
-  ____ _     _____
+SWARM_LOGO = r"""  ____ _     _____
  / ___| |   |_   _|_ _  ___
-| |   | |    | |/ _` |/ _ \\
+| |   | |    | |/ _` |/ _ \
 | |___| |___ | | |_| |  __/
- \____|_____|___/ \__,_|\___|
+ \____|_____|___/  `__,_|\___|
 
 Swarm v{version} - Ready.
 """
@@ -64,7 +63,7 @@ WELCOME = [
     "Another day, another codebase to save.",
     "Swarm is online. Try not to break anything.",
     "245 agents. Zero patience for bad code.",
-    "I woke up and chose productivity. Barey.",
+    "I woke up and chose productivity. Barely.",
     "Fresh session. Clean slate.",
     "Loaded and ready.",
     "Your personal army of AI agents is assembled.",
