@@ -142,7 +142,8 @@ def clean_input(prompt=""):
         
         # Detect paste: check if data is already buffered when we enter raw mode
         import select as _sel
-        paste_buf = []
+        paste_num = 0
+        paste_refs = {}  # Store pasted text content by reference number
         pasted_just_now = False
         
         # Wait a bit longer to catch multi-part pastes (some terminals send paste in chunks)
@@ -165,51 +166,56 @@ def clean_input(prompt=""):
                 except:
                     break
             
-            text = raw.decode('utf-8', errors='replace')
+            pasted_text = raw.decode('utf-8', errors='replace')
             # Strip leading/trailing whitespace
-            text = text.strip()
+            pasted_text = pasted_text.strip()
             
-            # Count lines
-            lines = text.split('\n')
-            line_count = len(lines)
-            char_count = len(text)
-            
-            # Determine display format
-            if line_count >= 5:
-                display = f"[ {line_count} Lines ]"
-                # For editing: normalize to single spaces
-                text = ' '.join(text.split())
-            else:
-                display = f"[ {char_count} Chars ]"
-                # For editing: normalize to single spaces
-                text = ' '.join(text.split())
-            
-            # Add text to buffer FIRST (before showing anything)
-            for ch in text:
-                if ord(ch) >= 32:
-                    buf.append(ch)
-            
-            # Mark that we just finished paste - Enter should be ignored once
-            pasted_just_now = True
-            
-            # Now show ONLY the bracket - text is in buffer but hidden
-            sys.stdout.write(display)
-            sys.stdout.flush()
+            if pasted_text:
+                # Store this pasted text and assign a reference number
+                paste_num += 1
+                paste_refs[paste_num] = pasted_text
+                
+                # Count lines to determine display
+                lines = pasted_text.split('\n')
+                line_count = len(lines)
+                char_count = len(pasted_text)
+                
+                # Show reference instead of actual text
+                if line_count >= 5:
+                    display = f"[ Pasted #{paste_num} ] ({line_count} lines)"
+                else:
+                    display = f"[ Pasted #{paste_num} ] ({char_count} chars)"
+                
+                # DON'T add text to buffer yet - just show reference
+                # User must press Enter to confirm, THEN we add text
+                pasted_just_now = True
+                
+                # Show the reference
+                sys.stdout.write(display)
+                sys.stdout.flush()
         
         while True:
             ch = sys.stdin.read(1)
             
             # Enter
             if ch in ('\r', '\n'):
-                # If we just finished paste, ignore this Enter - let user press again to confirm
-                if pasted_just_now:
-                    # User pressed Enter right after paste - ignore it (first Enter is for the paste)
-                    # Clear the flag to allow second Enter to submit
+                # If we just finished paste with reference, expand it now
+                if pasted_just_now and paste_num > 0:
+                    # Expand the paste reference to actual text
+                    last_paste = paste_refs[paste_num]
+                    # Normalize whitespace for editing
+                    expanded = ' '.join(last_paste.split())
+                    # Now add to buffer
+                    for ch in expanded:
+                        if ord(ch) >= 32:
+                            buf.append(ch)
                     pasted_just_now = False
-                    # Re-show the bracket and wait for real confirm
-                    sys.stdout.write(display)
+                    
+                    # Show newline and return
+                    sys.stdout.write('\r\n')
                     sys.stdout.flush()
-                    continue
+                    return ''.join(buf + list(reversed(after)))
+                
                 sys.stdout.write('\r\n')
                 sys.stdout.flush()
                 return ''.join(buf + list(reversed(after)))
