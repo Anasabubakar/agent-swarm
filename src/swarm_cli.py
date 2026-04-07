@@ -165,35 +165,32 @@ def clean_input(prompt=""):
                     break
             
             text = raw.decode('utf-8', errors='replace')
-            # Strip leading/trailing whitespace but preserve internal structure
+            # Strip leading/trailing whitespace
             text = text.strip()
             
-            # Count lines BEFORE normalizing whitespace
+            # Count lines
             lines = text.split('\n')
             line_count = len(lines)
             char_count = len(text)
             
-            # Determine display format based on line count
+            # Determine display format
             if line_count >= 5:
                 display = f"[ {line_count} Lines ]"
-                # For editing: normalize to single spaces (like before)
+                # For editing: normalize to single spaces
                 text = ' '.join(text.split())
             else:
                 display = f"[ {char_count} Chars ]"
                 # For editing: normalize to single spaces
                 text = ' '.join(text.split())
             
-            # Show the count/bracket instead of full text, then add actual text for editing
-            sys.stdout.write(display)
-            sys.stdout.flush()
-            
-            # Add actual text to buffer for editing (but don't display all of it)
+            # Add text to buffer FIRST (before showing anything)
             for ch in text:
                 if ord(ch) >= 32:
                     buf.append(ch)
             
-            # Move cursor to start of bracket and to end of text (hidden)
-            # User sees bracket, can backspace/edit the actual text
+            # Now show ONLY the bracket - text is in buffer but hidden
+            sys.stdout.write(display)
+            sys.stdout.flush()
         
         while True:
             ch = sys.stdin.read(1)
