@@ -143,6 +143,7 @@ def clean_input(prompt=""):
         # Detect paste: check if data is already buffered when we enter raw mode
         import select as _sel
         paste_buf = []
+        from_paste = False
         
         # Wait a bit longer to catch multi-part pastes (some terminals send paste in chunks)
         r, _, _ = _sel.select([fd], [], [], 0.1)
@@ -191,12 +192,24 @@ def clean_input(prompt=""):
             # Now show ONLY the bracket - text is in buffer but hidden
             sys.stdout.write(display)
             sys.stdout.flush()
+            
+            # IMPORTANT: Don't accept Enter immediately after paste!
+            # The user needs to press Enter a second time to confirm paste edits
+            from_paste = True
         
         while True:
             ch = sys.stdin.read(1)
             
             # Enter
             if ch in ('\r', '\n'):
+                # If we just finished paste, ignore this Enter - let user press again to confirm
+                if 'from_paste' in dir() and from_paste:
+                    # User pressed Enter right after paste - ignore it
+                    # Re-show the bracket and wait for real confirm
+                    sys.stdout.write(display)
+                    sys.stdout.flush()
+                    from_paste = False
+                    continue
                 sys.stdout.write('\r\n')
                 sys.stdout.flush()
                 return ''.join(buf + list(reversed(after)))
