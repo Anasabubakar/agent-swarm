@@ -1,0 +1,126 @@
+// Cache the set of tool names that support grouped rendering, keyed by the
+// tools array reference. The tools array is stable across renders (only
+// replaced on MCP connect/disconnect), so this avoids rebuilding the set on
+// every call. WeakMap lets old entries be GC'd when the array is replaced.
+const GROUPING_CACHE = new WeakMap();
+function getToolsWithGrouping(tools) {
+    let cached = GROUPING_CACHE.get(tools);
+    if (!cached) {
+        cached = new Set(tools.filter(t => t.renderGroupedToolUse).map(t => t.name));
+        GROUPING_CACHE.set(tools, cached);
+    }
+    return cached;
+}
+function getToolUseInfo(msg) {
+    if (msg.type === 'assistant' && msg.message.content[0]?.type === 'tool_use') {
+        const content = msg.message.content[0];
+        return {
+            messageId: msg.message.id,
+            toolUseId: content.id,
+            toolName: content.name,
+        };
+    }
+    return null;
+}
+/**
+ * Groups tool uses by message.id (same API response) if the tool supports grouped rendering.
+ * Only groups 2+ tools of the same type from the same message.
+ * Also collects corresponding tool_results and attaches them to the grouped message.
+ * When verbose is true, skips grouping so messages render at original positions.
+ */
+export function applyGrouping(messages, tools, verbose = false) {
+    // In verbose mode, don't group - each message renders at its original position
+    if (verbose) {
+        return {
+            messages: messages,
+        };
+    }
+    const toolsWithGrouping = getToolsWithGrouping(tools);
+    // First pass: group tool uses by message.id + tool name
+    const groups = new Map();
+    for (const msg of messages) {
+        const info = getToolUseInfo(msg);
+        if (info && toolsWithGrouping.has(info.toolName)) {
+            const key = `${info.messageId}:${info.toolName}`;
+            const group = groups.get(key) ?? [];
+            group.push(msg);
+            groups.set(key, group);
+        }
+    }
+    // Identify valid groups (2+ items) and collect their tool use IDs
+    const validGroups = new Map();
+    const groupedToolUseIds = new Set();
+    for (const [key, group] of groups) {
+        if (group.length >= 2) {
+            validGroups.set(key, group);
+            for (const msg of group) {
+                const info = getToolUseInfo(msg);
+                if (info) {
+                    groupedToolUseIds.add(info.toolUseId);
+                }
+            }
+        }
+    }
+    // Collect result messages for grouped tool_uses
+    // Map from tool_use_id to the user message containing that result
+    const resultsByToolUseId = new Map();
+    for (const msg of messages) {
+        if (msg.type === 'user') {
+            for (const content of msg.message.content) {
+                if (content.type === 'tool_result' &&
+                    groupedToolUseIds.has(content.tool_use_id)) {
+                    resultsByToolUseId.set(content.tool_use_id, msg);
+                }
+            }
+        }
+    }
+    // Second pass: build output, emitting each group only once
+    const result = [];
+    const emittedGroups = new Set();
+    for (const msg of messages) {
+        const info = getToolUseInfo(msg);
+        if (info) {
+            const key = `${info.messageId}:${info.toolName}`;
+            const group = validGroups.get(key);
+            if (group) {
+                if (!emittedGroups.has(key)) {
+                    emittedGroups.add(key);
+                    const firstMsg = group[0];
+                    // Collect results for this group
+                    const results = [];
+                    for (const assistantMsg of group) {
+                        const toolUseId = assistantMsg.message.content[0].id;
+                        const resultMsg = resultsByToolUseId.get(toolUseId);
+                        if (resultMsg) {
+                            results.push(resultMsg);
+                        }
+                    }
+                    const groupedMessage = {
+                        type: 'grouped_tool_use',
+                        toolName: info.toolName,
+                        messages: group,
+                        results,
+                        displayMessage: firstMsg,
+                        uuid: `grouped-${firstMsg.uuid}`,
+                        timestamp: firstMsg.timestamp,
+                        messageId: info.messageId,
+                    };
+                    result.push(groupedMessage);
+                }
+                continue;
+            }
+        }
+        // Skip user messages whose tool_results are all grouped
+        if (msg.type === 'user') {
+            const toolResults = msg.message.content.filter((c) => c.type === 'tool_result');
+            if (toolResults.length > 0) {
+                const allGrouped = toolResults.every(tr => groupedToolUseIds.has(tr.tool_use_id));
+                if (allGrouped) {
+                    continue;
+                }
+            }
+        }
+        result.push(msg);
+    }
+    return { messages: result };
+}
