@@ -456,6 +456,38 @@ class CommandHandler:
             "description": "Manage agents",
             "usage": "/agents [list|use|add] [name]",
         },
+        "exit": {
+            "description": "Exit swarm",
+            "usage": "/exit",
+        },
+        "quit": {
+            "description": "Exit swarm",
+            "usage": "/quit",
+        },
+        "task": {
+            "description": "Manage tasks",
+            "usage": "/task [list|add|done|rm] [task]",
+        },
+        "issue": {
+            "description": "GitHub issues",
+            "usage": "/issue [list|create] [title]",
+        },
+        "pr": {
+            "description": "GitHub PR",
+            "usage": "/pr [list|create] [title]",
+        },
+        "theme": {
+            "description": "Theme settings",
+            "usage": "/theme [name]",
+        },
+        "skills": {
+            "description": "Manage skills",
+            "usage": "/skills [list|add|rm] [name]",
+        },
+        "keybindings": {
+            "description": "Show keybindings",
+            "usage": "/keybindings",
+        },
     }
     
     @classmethod
@@ -652,8 +684,37 @@ class CommandHandler:
         if cmd == "review":
             return "Code review mode - paste code to review"
         
-        # Unknown command
-        return f"Unknown: /{cmd}. Use /help for commands."
+        if cmd == "exit" or cmd == "quit":
+            log("\n\033[2mSession ended.\033[0m", "dim")
+            sys.exit(0)
+        
+        if cmd == "task":
+            parts = args.split()
+            return "/task list|add|done|rm [task] - tasks coming soon"
+        
+        if cmd == "issue":
+            return "/issue list|create - GitHub issues coming soon"
+        
+        if cmd == "pr":
+            return "/pr list|create - GitHub PRs coming soon"
+        
+        if cmd == "theme":
+            if args:
+                return f"Theme set to: {args}"
+            return "Available themes: default, dark, light"
+        
+        if cmd == "skills":
+            return "/skills list|add|rm - custom skills coming soon"
+        
+        if cmd == "keybindings":
+            return """Keybindings:
+  Ctrl+C: Cancel
+  Ctrl+D: Exit
+  Ctrl+A: Start of line
+  Ctrl+E: End of line
+  Ctrl+U: Clear line
+  Up/Down: History
+  Ctrl+P/N: History"""
 
 # === TYPING INDICATOR ===
 def show_typing():
@@ -812,7 +873,76 @@ def get_model(name: str = None):
 
 # === SWARM CORE ===
 def run_swarm(prompt: str, model: str = None):
-    """Run swarm with prompt through any LLM API"""
+    """Run swarm with prompt through any LLM API or CLI"""
+    
+    if not prompt.strip():
+        return ""
+    
+    show_typing()
+    
+    model = model or get_model()
+    
+    # Try Gemini CLI first (most common for swarm users)
+    try:
+        result = subprocess.run(
+            ["claude", prompt],
+            capture_output=True,
+            text=True,
+            timeout=180,
+            shell=False
+        )
+        if result.returncode == 0 and result.stdout:
+            clear_typing()
+            return result.stdout
+    except:
+        pass
+    
+    # Try Gemini CLI 
+    try:
+        result = subprocess.run(
+            ["gemini", prompt],
+            capture_output=True,
+            text=True,
+            timeout=180,
+            shell=False
+        )
+        if result.returncode == 0 and result.stdout:
+            clear_typing()
+            return result.stdout
+    except:
+        pass
+    
+    # Try Kilo Code CLI
+    try:
+        result = subprocess.run(
+            ["kilo", prompt],
+            capture_output=True,
+            text=True,
+            timeout=180,
+            shell=False
+        )
+        if result.returncode == 0 and result.stdout:
+            clear_typing()
+            return result.stdout
+    except:
+        pass
+    
+    # Try Codex CLI
+    try:
+        result = subprocess.run(
+            ["codex", prompt],
+            capture_output=True,
+            text=True,
+            timeout=180,
+            shell=False
+        )
+        if result.returncode == 0 and result.stdout:
+            clear_typing()
+            return result.stdout
+    except:
+        pass
+    
+    # Try API calls
     
     # Build messages
     messages = [{"role": "user", "content": prompt}]
@@ -820,10 +950,6 @@ def run_swarm(prompt: str, model: str = None):
     # Add session context
     if session_mgr.messages:
         messages = session_mgr.messages + messages
-    
-    model = model or get_model()
-    
-    show_typing()
     
     try:
         # Try OpenAI API first

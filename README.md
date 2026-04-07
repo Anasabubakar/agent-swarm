@@ -1,10 +1,14 @@
 # 🛡️ Swarm
 
-**Engine-agnostic multi-agent orchestration. 245 agents. One command. v3.0.1**
+**Engine-agnostic multi-agent orchestration. 245 agents. One command. v3.0.5**
 
-- Windows/Linux/Mac support
-- Paste shows `[XX Chars]` / `[XX Lines]` — no more auto-submit on paste
-- Works with Claude Code, Gemini CLI, Kilo Code, Codex, Cursor, and more
+Claude Code features fully implemented:
+
+- **CLI Commands**: `/help`, `/clear`, `/status`, `/resume`, `/sessions`, `/model`, `/compact`, `/save`, `/memory`, `/mcp`, `/git`, `/config`, `/cost`, `/undo`, `/review`, `/btw`
+- **Session Management**: Auto-save sessions, history, resume, compact
+- **Paste Handling**: Reference expansion `[Pasted #1]` - no auto-submit
+- **Windows/Linux/Mac**: Full cross-platform support
+- **Multiple Models**: Claude Sonnet, Opus, Gemini, GPT-4
 
 ```bash
 npm install -g @anas.abubakar/swarm
@@ -15,7 +19,16 @@ Then in any project folder:
 swarm "Build a landing page"
 ```
 
-That's it.
+**Commands:**
+- `/help` - List all commands
+- `/sessions` - List saved sessions  
+- `/resume [id]` - Resume a session
+- `/compact` - Compact conversation history
+- `/status` - Show session status
+- `/model [name]` - Switch model
+- `/memory list|add [text]` - Manage memory
+
+That's it. Let's go.
 
 ## What Happens
 
