@@ -2,8 +2,12 @@
 
 **Engine-agnostic multi-agent orchestration. 245 agents. One command. v3.0.1**
 
+- Windows/Linux/Mac support
+- Paste shows `[XX Chars]` / `[XX Lines]` — no more auto-submit on paste
+- Works with Claude Code, Gemini CLI, Kilo Code, Codex, Cursor, and more
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Anasabubakar/agent-swarm/main/install.sh | bash
+npm install -g @anas.abubakar/swarm
 ```
 
 Then in any project folder:
