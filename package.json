@@ -1,6 +1,6 @@
 {
   "name": "@anas.abubakar/swarm",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Agent Swarm — Enhanced with Claude Code features. One command, 245+ agents.",
   "main": "bin/swarm",
   "bin": {
