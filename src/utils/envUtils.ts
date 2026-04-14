@@ -1,4 +1,19 @@
 import memoize from 'lodash-es/memoize.js'
+import fs from 'node:fs'
+import path from 'node:path'
+
+// Initialize workspace local .swarm storage
+const workspaceRoot = process.cwd()
+const swarmStorageDir = path.join(workspaceRoot, '.swarm')
+if (!fs.existsSync(swarmStorageDir)) {
+  fs.mkdirSync(swarmStorageDir, { recursive: true })
+  fs.writeFileSync(path.join(swarmStorageDir, '.gitignore'), `*
+!.gitignore
+`)
+}
+
+process.env.SWARM_WORKSPACE_ROOT = workspaceRoot
+process.env.SWARM_STORAGE_DIR = swarmStorageDir
 import { homedir } from 'os'
 import { join } from 'path'
 
