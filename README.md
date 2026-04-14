@@ -1,49 +1,49 @@
-# Agent Swarm (Enhanced)
+# Agent Swarm 🔥
 
-Agent Swarm is an engine-agnostic multi-agent orchestration system, now enhanced with the power and UI/UX of Claude Code.
+Engine-agnostic multi-agent swarm orchestrator. One command, an army of agents.
 
-## 🚀 Key Features
-- **Engine-agnostic:** Works with any CLI agent (Claude, Gemini, Kilo, etc.).
-- **245+ Specialized Agents:** Academic, Creative, Engineering, Management, and more.
-- **Enhanced UI/UX:** Built with React/Ink for a beautiful, responsive CLI experience.
-- **Smart Tools:** Includes Bash, File Editing, Grep, Glob, and more.
-- **Parallel Orchestration:** Dispatch multiple agents simultaneously for complex goals.
+## 🚀 What is this
+Agent Swarm turns any CLI agent into a coordinated hive. Drop in one, run hundreds. Works with every model, every provider, zero lock in.
+
+## ✅ Key Features
+- **Engine agnostic**  — works with Claude, Gemini, Groq, Kilo, OpenAI, your local LLM, everything.
+- **245+ specialized agents** — prebuilt for code, design, writing, ops, research, and everything in between.
+- **Parallel orchestration** — dispatch 10, 20, 100 agents at the same time for complex goals.
+- **Beautiful CLI TUI** — smooth terminal interface, proper loading flow, swarm personality.
+- **Batteries included** — bash, file editing, git, grep, glob, search, all tools built in.
+- **Zero magic** — runs on your machine, your keys, no third party.
 
 ## 📦 Installation
-```bash
-./install.sh
-```
-Or install via npm:
+
+One command:
 ```bash
 npm install -g @anas.abubakar/swarm
 ```
 
+That's it. Done.
+
 ## 🛠 Usage
-Launch the interactive CLI:
+
+Launch the full interactive swarm interface:
 ```bash
 swarm
 ```
-Run the multi-agent orchestrator:
+
+Run orchestrator mode directly:
 ```bash
-swarm "Build a full-stack e-commerce site"
+swarm "Build me a full stack e-commerce site with stripe checkout and dark mode"
 ```
-List available agents:
+
+List every available agent:
 ```bash
 swarm --agents
 ```
 
-## 🚢 Publishing to NPM
-To publish your changes to npm:
+## 🧠 Philosophy
+Agents shouldn't be toys. They should be reliable, fast, composable, and get real work done. Agent Swarm is built for production.
 
-1. **Login to npm:**
-   ```bash
-   npm login
-   ```
-2. **Update version:** (already updated to 4.0.0 in package.json)
-3. **Publish:**
-   ```bash
-   npm publish --access public
-   ```
+No bullshit, no marketing, just agents that build things.
 
-## 📄 License
-MIT
+---
+
+MIT License.
