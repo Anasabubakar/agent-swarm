@@ -1,8 +1,6 @@
-__pycache__/
-*.pyc
-memory/
-output/
-research/
+node_modules/
 .DS_Store
-*.log
 .env
+*.log
+dist/
+build/
