@@ -1,4 +1,4 @@
-import { buildComputerUseTools } from '@ant/computer-use-mcp'
+const buildComputerUseTools = (...args: any[]) => [];
 import { join } from 'path'
 import { fileURLToPath } from 'url'
 import { buildMcpToolName } from '../../services/mcp/mcpStringUtils.js'
@@ -27,7 +27,7 @@ export function setupComputerUseMCP(): {
   const allowedTools = buildComputerUseTools(
     CLI_CU_CAPABILITIES,
     getChicagoCoordinateMode(),
-  ).map(t => buildMcpToolName(COMPUTER_USE_MCP_SERVER_NAME, t.name))
+  ).map((t: any) => buildMcpToolName(COMPUTER_USE_MCP_SERVER_NAME, t.name))
 
   // command/args are never spawned — client.ts intercepts by name and
   // uses the in-process server. The config just needs to exist with

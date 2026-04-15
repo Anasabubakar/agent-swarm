@@ -16,10 +16,6 @@
  * GrowthBook gate `tengu_malort_pedway` (see gates.ts).
  */
 
-/*
-import { bindSessionContext, type ComputerUseSessionContext, type CuCallToolResult, type CuPermissionRequest, type CuPermissionResponse, DEFAULT_GRANT_FLAGS, type ScreenshotDims } from '@ant/computer-use-mcp';
-*/
-
 type ComputerUseSessionContext = any;
 type CuCallToolResult = any;
 type CuPermissionRequest = any;

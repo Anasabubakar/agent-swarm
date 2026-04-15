@@ -1,9 +1,3 @@
-// import {
-//   type ClaudeForChromeContext,
-//   createClaudeForChromeMcpServer,
-//   type Logger,
-//   type PermissionMode,
-// } from '@ant/claude-for-chrome-mcp'
 type ClaudeForChromeContext = any;
 const createClaudeForChromeMcpServer = (ctx: any) => ({
   setRequestHandler: () => {},

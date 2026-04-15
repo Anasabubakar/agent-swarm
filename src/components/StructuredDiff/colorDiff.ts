@@ -1,9 +1,8 @@
-import {
-  ColorDiff,
-  ColorFile,
-  getSyntaxTheme as nativeGetSyntaxTheme,
-  type SyntaxTheme,
-} from 'color-diff-napi'
+const ColorDiff = {} as any;
+const ColorFile = {} as any;
+const nativeGetSyntaxTheme = (name: string) => null;
+type SyntaxTheme = any;
+
 import { isEnvDefinedFalsy } from '../../utils/envUtils.js'
 
 export type ColorModuleUnavailableReason = 'env'
@@ -19,7 +18,7 @@ export function getColorModuleUnavailableReason(): ColorModuleUnavailableReason 
   if (isEnvDefinedFalsy(process.env.CLAUDE_CODE_SYNTAX_HIGHLIGHT)) {
     return 'env'
   }
-  return null
+  return 'env'; // Force it to be unavailable since we mocked it
 }
 
 export function expectColorDiff(): typeof ColorDiff | null {

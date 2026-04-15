@@ -1,4 +1,3 @@
-// import { BROWSER_TOOLS } from '@ant/claude-for-chrome-mcp'
 const BROWSER_TOOLS = [
   { name: 'javascript_tool' },
   { name: 'read_page' },
