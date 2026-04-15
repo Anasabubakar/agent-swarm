@@ -22,5 +22,3 @@ type C = IsSet<string>;
 @category Type
 */
 export type UnknownSet = ReadonlySet<unknown>;
-
-export {};

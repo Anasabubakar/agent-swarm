@@ -4,3 +4,7 @@ node_modules/
 *.log
 dist/
 build/
+
+echo ".env.npm" >> .gitignore
+   2     git add .gitignore
+   3     git commit -m "chore: add .env.npm to gitignore"

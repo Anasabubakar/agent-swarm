@@ -22,5 +22,3 @@ type C = IsMap<string>;
 @category Type
 */
 export type UnknownMap = ReadonlyMap<unknown, unknown>;
-
-export {};

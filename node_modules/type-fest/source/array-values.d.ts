@@ -20,5 +20,3 @@ const getWeekdayName = (day: Weekday): WeekdayName => weekdays[day];
 @category Array
 */
 export type ArrayValues<T extends readonly unknown[]> = T[number];
-
-export {};
