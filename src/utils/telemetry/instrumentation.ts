@@ -4,10 +4,10 @@ import { logs } from '@opentelemetry/api-logs'
 // switch statements below. A process uses at most one protocol variant per
 // signal, but static imports would load all 6 (~1.2MB) on every startup.
 import {
+  Resource,
   envDetector,
   hostDetector,
   osDetector,
-  resourceFromAttributes,
 } from '@opentelemetry/resources'
 import {
   BatchLogRecordProcessor,
@@ -351,7 +351,7 @@ function isBigQueryMetricsEnabled() {
  * Uses BETA_TRACING_ENDPOINT instead of OTEL_EXPORTER_OTLP_ENDPOINT.
  */
 async function initializeBetaTracing(
-  resource: ReturnType<typeof resourceFromAttributes>,
+  resource: Resource,
 ): Promise<void> {
   const endpoint = process.env.BETA_TRACING_ENDPOINT
   if (!endpoint) {
@@ -483,10 +483,10 @@ export async function initializeTelemetry() {
     }
   }
 
-  const baseResource = resourceFromAttributes(baseAttributes)
+  const baseResource = new Resource(baseAttributes)
 
   // Use OpenTelemetry detectors
-  const osResource = resourceFromAttributes(
+  const osResource = new Resource(
     osDetector.detect().attributes || {},
   )
 
@@ -497,9 +497,9 @@ export async function initializeTelemetry() {
         [SEMRESATTRS_HOST_ARCH]: hostDetected.attributes[SEMRESATTRS_HOST_ARCH],
       }
     : {}
-  const hostArchResource = resourceFromAttributes(hostArchAttributes)
+  const hostArchResource = new Resource(hostArchAttributes)
 
-  const envResource = resourceFromAttributes(
+  const envResource = new Resource(
     envDetector.detect().attributes || {},
   )
 

@@ -1,5 +1,5 @@
 import type { AnyValueMap, Logger, logs } from '@opentelemetry/api-logs'
-import { resourceFromAttributes } from '@opentelemetry/resources'
+import { Resource } from '@opentelemetry/resources'
 import {
   BatchLogRecordProcessor,
   LoggerProvider,
@@ -353,7 +353,7 @@ export function initialize1PEventLogging(): void {
     }
   }
 
-  const resource = resourceFromAttributes(attributes)
+  const resource = new Resource(attributes)
 
   // Create a new LoggerProvider with the EventLoggingExporter
   // NOTE: This is kept separate from customer telemetry logs to ensure
