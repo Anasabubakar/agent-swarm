@@ -9,7 +9,7 @@ const __dirname = dirname(__filename);
 const SWARM_ROOT = join(__dirname, '..');
 
 // Run the new TypeScript-based CLI
-const child = spawn('npx', ['tsx', join(SWARM_ROOT, 'src', 'main.tsx'), ...process.argv.slice(2)], {
+const child = spawn('npx', ['tsx', '--loader', join(SWARM_ROOT, 'bin', 'bun-loader.mjs'), join(SWARM_ROOT, 'src', 'main.tsx'), ...process.argv.slice(2)], {
   cwd: process.cwd(),
   stdio: 'inherit',
   env: {
