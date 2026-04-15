@@ -1,7 +1,9 @@
-import type {
-  ComputerUseHostAdapter,
-  Logger,
-} from '@ant/computer-use-mcp/types'
+// import type {
+//   ComputerUseHostAdapter,
+//   Logger,
+// } from '@ant/computer-use-mcp/types'
+type ComputerUseHostAdapter = any;
+type Logger = any;
 import { format } from 'util'
 import { logForDebugging } from '../debug.js'
 import { COMPUTER_USE_MCP_SERVER_NAME } from './common.js'

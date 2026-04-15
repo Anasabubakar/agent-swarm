@@ -1,7 +1,9 @@
-import type {
-  ComputerUseInput,
-  ComputerUseInputAPI,
-} from '@ant/computer-use-input'
+// import type {
+//   ComputerUseInput,
+//   ComputerUseInputAPI,
+// } from '@ant/computer-use-input'
+type ComputerUseInput = any;
+type ComputerUseInputAPI = any;
 
 let cached: ComputerUseInputAPI | undefined
 
@@ -22,7 +24,8 @@ let cached: ComputerUseInputAPI | undefined
 export function requireComputerUseInput(): ComputerUseInputAPI {
   if (cached) return cached
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const input = require('@ant/computer-use-input') as ComputerUseInput
+  // const input = require('@ant/computer-use-input') as ComputerUseInput
+  const input = { isSupported: false } as any;
   if (!input.isSupported) {
     throw new Error('@ant/computer-use-input is not supported on this platform')
   }

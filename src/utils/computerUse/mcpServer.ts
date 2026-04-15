@@ -1,7 +1,12 @@
-import {
-  buildComputerUseTools,
-  createComputerUseMcpServer,
-} from '@ant/computer-use-mcp'
+// import {
+//   buildComputerUseTools,
+//   createComputerUseMcpServer,
+// } from '@ant/computer-use-mcp'
+const buildComputerUseTools = (...args: any[]) => [];
+const createComputerUseMcpServer = (...args: any[]) => ({
+  setRequestHandler: (schema: any, handler: any) => {},
+  connect: async (transport: any) => {},
+});
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import { homedir } from 'os'

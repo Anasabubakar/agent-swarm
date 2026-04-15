@@ -1,9 +1,16 @@
-import {
-  type ClaudeForChromeContext,
-  createClaudeForChromeMcpServer,
-  type Logger,
-  type PermissionMode,
-} from '@ant/claude-for-chrome-mcp'
+// import {
+//   type ClaudeForChromeContext,
+//   createClaudeForChromeMcpServer,
+//   type Logger,
+//   type PermissionMode,
+// } from '@ant/claude-for-chrome-mcp'
+type ClaudeForChromeContext = any;
+const createClaudeForChromeMcpServer = (ctx: any) => ({
+  setRequestHandler: () => {},
+  connect: async (transport: any) => {},
+});
+type Logger = any;
+type PermissionMode = 'ask' | 'skip_all_permission_checks' | 'follow_a_plan';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { format } from 'util'
 import { shutdownDatadog } from '../../services/analytics/datadog.js'

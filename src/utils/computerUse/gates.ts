@@ -1,4 +1,6 @@
-import type { CoordinateMode, CuSubGates } from '@ant/computer-use-mcp/types'
+// import type { CoordinateMode, CuSubGates } from '@ant/computer-use-mcp/types'
+type CoordinateMode = 'pixels' | 'normalized';
+type CuSubGates = any;
 
 import { getDynamicConfig_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import { getSubscriptionType } from '../auth.js'

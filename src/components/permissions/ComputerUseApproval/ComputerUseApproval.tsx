@@ -1,7 +1,15 @@
 import { c as _c } from "react/compiler-runtime";
-import { getSentinelCategory } from '@ant/computer-use-mcp/sentinelApps';
-import type { CuPermissionRequest, CuPermissionResponse } from '@ant/computer-use-mcp/types';
-import { DEFAULT_GRANT_FLAGS } from '@ant/computer-use-mcp/types';
+// import { getSentinelCategory } from '@ant/computer-use-mcp/sentinelApps';
+const getSentinelCategory = (bundleId: string) => undefined;
+// import type { CuPermissionRequest, CuPermissionResponse } from '@ant/computer-use-mcp/types';
+type CuPermissionRequest = any;
+type CuPermissionResponse = any;
+// import { DEFAULT_GRANT_FLAGS } from '@ant/computer-use-mcp/types';
+const DEFAULT_GRANT_FLAGS = {
+  clipboardRead: false,
+  clipboardWrite: false,
+  systemKeyCombos: false
+};
 import figures from 'figures';
 import * as React from 'react';
 import { useMemo, useState } from 'react';

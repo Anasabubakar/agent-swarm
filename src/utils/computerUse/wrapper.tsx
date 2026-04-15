@@ -16,7 +16,18 @@
  * GrowthBook gate `tengu_malort_pedway` (see gates.ts).
  */
 
+/*
 import { bindSessionContext, type ComputerUseSessionContext, type CuCallToolResult, type CuPermissionRequest, type CuPermissionResponse, DEFAULT_GRANT_FLAGS, type ScreenshotDims } from '@ant/computer-use-mcp';
+*/
+
+type ComputerUseSessionContext = any;
+type CuCallToolResult = any;
+type CuPermissionRequest = any;
+type CuPermissionResponse = any;
+const DEFAULT_GRANT_FLAGS = { clipboardRead: false, clipboardWrite: false, systemKeyCombos: false };
+type ScreenshotDims = any;
+const bindSessionContext = (...args: any[]) => ({ ctx: {}, dispatch: async () => ({}) });
+
 import * as React from 'react';
 import { getSessionId } from '../../bootstrap/state.js';
 import { ComputerUseApproval } from '../../components/permissions/ComputerUseApproval/ComputerUseApproval.js';
